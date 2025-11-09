@@ -212,14 +212,16 @@ public class TextureAtlas
             // Load the texture
             if (root.TryGetProperty("atlasFile", out JsonElement atlasFileElement))
             {
-                // If atlasFile is specified, use it
+                // If atlasFile is specified, use it (remove file extension for content pipeline)
                 string texturePath = atlasFileElement.GetString();
+                // Remove file extension since ContentManager expects asset names without extensions
+                texturePath = Path.ChangeExtension(texturePath, null);
                 atlas.Texture = content.Load<Texture2D>(texturePath);
             }
             else
             {
-                // Otherwise, assume the texture has the same name as the JSON file but with .png extension
-                string texturePath = Path.ChangeExtension(textureFileName, ".png");
+                // Otherwise, assume the texture has the same name as the JSON file but without extension
+                string texturePath = Path.ChangeExtension(textureFileName, null);
                 atlas.Texture = content.Load<Texture2D>(texturePath);
             }
 
