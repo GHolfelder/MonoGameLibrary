@@ -3,6 +3,7 @@ using System.IO;
 using System.Xml;
 using System.Xml.Linq;
 using System.Collections.Generic;
+using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -56,11 +57,26 @@ public class TextureAtlas
 
     /// <summary>
     /// Creates a new texture atlas based on a texture atlas xml configuration file.
+    /// This method loads both texture regions and animations from the same XML file.
     /// </summary>
     /// <param name="content">The content manager used to load the texture for the atlas.</param>
     /// <param name="fileName">The path to the xml file, relative to the content root directory.</param>
     /// <returns>The texture atlas created by this method.</returns>
     public static TextureAtlas FromXml(ContentManager content, string fileName)
+    {
+        TextureAtlas atlas = FromXmlTexture(content, fileName);
+        atlas.LoadAnimationsFromXml(fileName);
+        return atlas;
+    }
+
+    /// <summary>
+    /// Creates a new texture atlas based on a texture atlas xml configuration file.
+    /// This method only loads texture regions from the XML file.
+    /// </summary>
+    /// <param name="content">The content manager used to load the texture for the atlas.</param>
+    /// <param name="fileName">The path to the xml file, relative to the content root directory.</param>
+    /// <returns>The texture atlas created by this method.</returns>
+    public static TextureAtlas FromXmlTexture(ContentManager content, string fileName)
     {
         TextureAtlas atlas = new TextureAtlas();
 
@@ -108,20 +124,29 @@ public class TextureAtlas
                     }
                 }
 
+                return atlas;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Loads animations from an XML file and adds them to this texture atlas.
+    /// </summary>
+    /// <param name="fileName">The path to the xml file, relative to the content root directory.</param>
+    public void LoadAnimationsFromXml(string fileName)
+    {
+        string filePath = Path.Combine(Core.Content.RootDirectory, fileName);
+
+        using (Stream stream = TitleContainer.OpenStream(filePath))
+        {
+            using (XmlReader reader = XmlReader.Create(stream))
+            {
+                XDocument doc = XDocument.Load(reader);
+                XElement root = doc.Root;
+
                 // The <Animations> element contains individual <Animation> elements, each one describing
                 // a different animation within the atlas.
-                //
-                // Example:
-                // <Animations>
-                //      <Animation name="animation" delay="100">
-                //          <Frame region="spriteOne" />
-                //          <Frame region="spriteTwo" />
-                //      </Animation>
-                // </Animations>
-                //
-                // So we retrieve all of the <Animation> elements then loop through each one
-                // and generate a new Animation instance from it and add it to this atlas.
-                var animationElements = root.Element("Animations").Elements("Animation");
+                var animationElements = root.Element("Animations")?.Elements("Animation");
 
                 if (animationElements != null)
                 {
@@ -140,19 +165,144 @@ public class TextureAtlas
                             foreach (var frameElement in frameElements)
                             {
                                 string regionName = frameElement.Attribute("region").Value;
-                                TextureRegion region = atlas.GetRegion(regionName);
+                                TextureRegion region = GetRegion(regionName);
                                 frames.Add(region);
                             }
                         }
 
                         Animation animation = new Animation(frames, delay);
-                        atlas.AddAnimation(name, animation);
+                        AddAnimation(name, animation);
                     }
                 }
-
-                return atlas;
             }
         }
+    }
+
+    /// <summary>
+    /// Creates a new texture atlas from separate XML files for texture and animations.
+    /// </summary>
+    /// <param name="content">The content manager used to load the texture for the atlas.</param>
+    /// <param name="textureFileName">The path to the texture xml file, relative to the content root directory.</param>
+    /// <param name="animationFileName">The path to the animation xml file, relative to the content root directory.</param>
+    /// <returns>The texture atlas created by this method.</returns>
+    public static TextureAtlas FromXml(ContentManager content, string textureFileName, string animationFileName)
+    {
+        TextureAtlas atlas = FromXmlTexture(content, textureFileName);
+        atlas.LoadAnimationsFromXml(animationFileName);
+        return atlas;
+    }
+
+    /// <summary>
+    /// Creates a new texture atlas from a JSON texture file.
+    /// </summary>
+    /// <param name="content">The content manager used to load the texture for the atlas.</param>
+    /// <param name="textureFileName">The path to the texture json file, relative to the content root directory.</param>
+    /// <returns>The texture atlas created by this method.</returns>
+    public static TextureAtlas FromJsonTexture(ContentManager content, string textureFileName)
+    {
+        TextureAtlas atlas = new TextureAtlas();
+
+        string filePath = Path.Combine(content.RootDirectory, textureFileName);
+
+        using (Stream stream = TitleContainer.OpenStream(filePath))
+        {
+            JsonDocument doc = JsonDocument.Parse(stream);
+            JsonElement root = doc.RootElement;
+
+            // Load the texture
+            if (root.TryGetProperty("atlasFile", out JsonElement atlasFileElement))
+            {
+                // If atlasFile is specified, use it
+                string texturePath = atlasFileElement.GetString();
+                atlas.Texture = content.Load<Texture2D>(texturePath);
+            }
+            else
+            {
+                // Otherwise, assume the texture has the same name as the JSON file but with .png extension
+                string texturePath = Path.ChangeExtension(textureFileName, ".png");
+                atlas.Texture = content.Load<Texture2D>(texturePath);
+            }
+
+            // Load sprites
+            if (root.TryGetProperty("sprites", out JsonElement spritesElement))
+            {
+                foreach (JsonElement spriteElement in spritesElement.EnumerateArray())
+                {
+                    string name = spriteElement.GetProperty("name").GetString();
+                    int x = spriteElement.GetProperty("x").GetInt32();
+                    int y = spriteElement.GetProperty("y").GetInt32();
+                    int width = spriteElement.GetProperty("width").GetInt32();
+                    int height = spriteElement.GetProperty("height").GetInt32();
+
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        atlas.AddRegion(name, x, y, width, height);
+                    }
+                }
+            }
+        }
+
+        return atlas;
+    }
+
+    /// <summary>
+    /// Loads animations from a JSON file and adds them to this texture atlas.
+    /// </summary>
+    /// <param name="animationFileName">The path to the animation json file, relative to the content root directory.</param>
+    public void LoadAnimationsFromJson(string animationFileName)
+    {
+        string filePath = Path.Combine(Core.Content.RootDirectory, animationFileName);
+
+        using (Stream stream = TitleContainer.OpenStream(filePath))
+        {
+            JsonDocument doc = JsonDocument.Parse(stream);
+            JsonElement root = doc.RootElement;
+
+            if (root.TryGetProperty("animations", out JsonElement animationsElement))
+            {
+                foreach (JsonElement animationElement in animationsElement.EnumerateArray())
+                {
+                    string name = animationElement.GetProperty("name").GetString();
+                    
+                    // Get default duration (in milliseconds)
+                    int defaultDuration = 100; // Default fallback
+                    if (animationElement.TryGetProperty("defaultDuration", out JsonElement defaultDurationElement))
+                    {
+                        defaultDuration = defaultDurationElement.GetInt32();
+                    }
+
+                    List<TextureRegion> frames = new List<TextureRegion>();
+
+                    if (animationElement.TryGetProperty("frames", out JsonElement framesElement))
+                    {
+                        foreach (JsonElement frameElement in framesElement.EnumerateArray())
+                        {
+                            string spriteName = frameElement.GetProperty("sprite").GetString();
+                            TextureRegion region = GetRegion(spriteName);
+                            frames.Add(region);
+                        }
+                    }
+
+                    TimeSpan delay = TimeSpan.FromMilliseconds(defaultDuration);
+                    Animation animation = new Animation(frames, delay);
+                    AddAnimation(name, animation);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates a new texture atlas from separate JSON files for texture and animations.
+    /// </summary>
+    /// <param name="content">The content manager used to load the texture for the atlas.</param>
+    /// <param name="textureFileName">The path to the texture json file, relative to the content root directory.</param>
+    /// <param name="animationFileName">The path to the animation json file, relative to the content root directory.</param>
+    /// <returns>The texture atlas created by this method.</returns>
+    public static TextureAtlas FromJson(ContentManager content, string textureFileName, string animationFileName)
+    {
+        TextureAtlas atlas = FromJsonTexture(content, textureFileName);
+        atlas.LoadAnimationsFromJson(animationFileName);
+        return atlas;
     }
 
     /// <summary>
