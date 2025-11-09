@@ -36,6 +36,34 @@ Both `TextureAtlas` and `Tilemap` use **XML-based configuration** loaded via `Fr
 </TextureAtlas>
 ```
 
+### JSON Configuration System
+`TextureAtlas` also supports **JSON-based configuration** for separate texture and animation files:
+
+```json
+// Texture JSON format
+{
+  "sprites": [
+    {"name": "player_walk_N_0", "x": 0, "y": 0, "width": 64, "height": 64}
+  ],
+  "atlasFile": "../Content/images/atlas.png"
+}
+
+// Animation JSON format
+{
+  "animations": [
+    {
+      "name": "player_walk_N",
+      "frames": [{"sprite": "player_walk_N_0"}],
+      "defaultDuration": 200
+    }
+  ]
+}
+```
+
+### Loading Methods
+- **Combined files**: `FromXml(content, fileName)` or `FromJson(content, textureFile, animationFile)`
+- **Separate files**: `FromXmlTexture()` + `LoadAnimationsFromXml()` or `FromJsonTexture()` + `LoadAnimationsFromJson()`
+
 ### Input State Management
 All input classes follow **previous/current state pattern** for edge detection:
 - `WasKeyJustPressed()` = `CurrentState.IsKeyDown() && PreviousState.IsKeyUp()`
