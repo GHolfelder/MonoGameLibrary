@@ -59,10 +59,14 @@ public class AnimatedSprite : Sprite
     public void Update(GameTime gameTime)
     {
         _elapsed += gameTime.ElapsedGameTime;
+        
+        // Get the delay for the current frame
+        TimeSpan currentFrameDelay = _animation.GetFrameDelay(_currentFrame);
+        
         // Check if it's time to move to the next frame
-        if (_elapsed >= _animation.Delay)
+        if (_elapsed >= currentFrameDelay)
         {
-            _elapsed -= _animation.Delay;
+            _elapsed -= currentFrameDelay;
             _currentFrame++;
             // Loop back to the beginning if we exceed the number of frames
             if (_currentFrame >= _animation.Frames.Count)

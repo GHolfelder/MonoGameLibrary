@@ -274,6 +274,7 @@ public class TextureAtlas
                     }
 
                     List<TextureRegion> frames = new List<TextureRegion>();
+                    List<TimeSpan> frameDelays = new List<TimeSpan>();
 
                     if (animationElement.TryGetProperty("frames", out JsonElement framesElement))
                     {
@@ -282,11 +283,24 @@ public class TextureAtlas
                             string spriteName = frameElement.GetProperty("sprite").GetString();
                             TextureRegion region = GetRegion(spriteName);
                             frames.Add(region);
+
+                            // Check if this frame has a specific duration
+                            if (frameElement.TryGetProperty("duration", out JsonElement durationElement) 
+                                && durationElement.ValueKind != JsonValueKind.Null)
+                            {
+                                int frameDuration = durationElement.GetInt32();
+                                frameDelays.Add(TimeSpan.FromMilliseconds(frameDuration));
+                            }
+                            else
+                            {
+                                // Use default duration for this frame
+                                frameDelays.Add(TimeSpan.FromMilliseconds(defaultDuration));
+                            }
                         }
                     }
 
-                    TimeSpan delay = TimeSpan.FromMilliseconds(defaultDuration);
-                    Animation animation = new Animation(frames, delay);
+                    TimeSpan defaultDelay = TimeSpan.FromMilliseconds(defaultDuration);
+                    Animation animation = new Animation(frames, frameDelays, defaultDelay);
                     AddAnimation(name, animation);
                 }
             }
