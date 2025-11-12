@@ -136,15 +136,15 @@ atlas.LoadAnimationsFromJson("attack_animations.json");
 
 ## Game-specific classes (temporary, to be generalized)
 
-This library currently includes a small set of opinionated, game-facing classes under `MonoGameLibrary/Graphics` to help you get moving quickly. These are not yet part of the stable, reusable API and will be generalized or moved into samples over time. If you use them, expect breaking changes in future minor versions.
+This library currently includes a small set of opinionated, game-facing classes under `MonoGameLibrary/Graphics` (and an experimental AI interface under `MonoGameLibrary/AI`) to help you get moving quickly. These are not yet part of the stable, reusable API and will be generalized or moved into samples over time. If you use them, expect breaking changes in future minor versions.
 
 - `Graphics/AnimationState.cs`
-  - What it is: Fixed enum of animation states (Idle, Walk, Run, Attack, Hurt, Death) plus an `IAIBehavior` contract and a simple `WanderBehavior` example.
-  - Why it’s game-specific: The concrete state set and bundled AI concepts are opinionated and won’t fit all games.
+  - What it is: Fixed enum of animation states (Idle, Walk, Run, Attack, Hurt, Death).
+  - Why it’s game-specific: The concrete state set is opinionated and won’t fit all games.
+  - Notes: The `IAIBehavior` interface and `WanderBehavior` example have been moved to `AI/AIBehavior.cs` under the `MonoGameLibrary.AI` namespace.
   - Suggested changes (roadmap):
     - Replace hard-coded enum with user-defined identifiers (e.g., strings or an app-defined enum) or provide an extensible registry.
-    - Move `IAIBehavior` and `WanderBehavior` to a future `MonoGameLibrary.AI` namespace or to the samples folder.
-    - Keep this file as a sample reference rather than core API.
+    - Keep this enum as a sample reference rather than core API.
 
 - `Graphics/Direction.cs`
   - What it is: `Direction8`, `Direction4`, and `DirectionHelper` utilities (abbreviations, 8-way to 4-way mapping).
@@ -171,12 +171,20 @@ This library currently includes a small set of opinionated, game-facing classes 
     - Keep tuning knobs (`MovementSpeed`, `SprintMultiplier`) as public properties; avoid hidden constants.
 
 - `Graphics/NPCSprite.cs`
-  - What it is: An NPC sprite driven by `IAIBehavior`; includes a small `Vector2Extensions.Normalized()` helper.
+  - What it is: An NPC sprite driven by `IAIBehavior` (from `MonoGameLibrary.AI`); includes a small `Vector2Extensions.Normalized()` helper.
   - Why it’s game-specific: Bakes a particular movement model and behavior interface into the sprite.
   - Suggested changes (roadmap):
     - Move to samples or a future `MonoGameLibrary.AI` package.
     - Keep AI behavior injection-based; avoid tight coupling to any one AI system.
     - Relocate generic math helpers (like `Vector2Extensions`) to a utilities file or drop if redundant with MonoGame APIs.
+
+- `AI/AIBehavior.cs`
+  - What it is: `IAIBehavior` interface and a simple `WanderBehavior` example under the `MonoGameLibrary.AI` namespace (experimental).
+  - Why it’s game-specific: The behavior model is intentionally minimal and opinionated; real games will need custom behaviors.
+  - Suggested changes (roadmap):
+    - Treat these as examples; consider moving to a `/samples` folder.
+    - Keep AI injection-based so sprites remain decoupled from specific behavior systems.
+    - Iterate toward a small set of reusable AI interfaces only if they prove broadly useful.
 
 ### Using these classes today
 - Treat them as examples or starters rather than stable API.
