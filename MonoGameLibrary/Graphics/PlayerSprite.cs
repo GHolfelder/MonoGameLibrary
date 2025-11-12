@@ -46,7 +46,7 @@ public class PlayerSprite : CharacterSprite
     /// <param name="use8WayDirections">Whether to use 8-way or 4-way directional animations</param>
     /// <param name="supportedStates">The animation states this character supports</param>
     public PlayerSprite(TextureAtlas atlas, string characterPrefix, bool use8WayDirections = true, 
-        params AnimationState[] supportedStates) 
+        params string[] supportedStates) 
         : base(atlas, characterPrefix, use8WayDirections, supportedStates)
     {
     }

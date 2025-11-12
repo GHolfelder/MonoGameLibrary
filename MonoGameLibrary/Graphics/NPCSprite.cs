@@ -51,7 +51,7 @@ public class NPCSprite : CharacterSprite
     /// <param name="use8WayDirections">Whether to use 8-way or 4-way directional animations</param>
     /// <param name="supportedStates">The animation states this character supports</param>
     public NPCSprite(TextureAtlas atlas, string characterPrefix, IAIBehavior aiBehavior,
-        bool use8WayDirections = true, params AnimationState[] supportedStates)
+        bool use8WayDirections = true, params string[] supportedStates)
         : base(atlas, characterPrefix, use8WayDirections, supportedStates)
     {
         _aiBehavior = aiBehavior;
@@ -137,7 +137,7 @@ public class NPCSprite : CharacterSprite
     {
         _velocity = Vector2.Zero;
         _isMoving = false;
-        SetAnimationState(AnimationState.Idle);
+    SetAnimationState(AnimationState.Idle);
     }
 
     /// <summary>

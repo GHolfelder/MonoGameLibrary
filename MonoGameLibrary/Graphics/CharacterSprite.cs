@@ -12,12 +12,12 @@ namespace MonoGameLibrary.Graphics;
 /// </summary>
 public class CharacterSprite
 {
-    protected readonly Dictionary<(AnimationState state, string direction), AnimatedSprite> _animations;
+    protected readonly Dictionary<(string state, string direction), AnimatedSprite> _animations;
     protected readonly TextureAtlas _atlas;
     protected readonly bool _use8WayDirections;
     protected readonly Sprite _placeholderSprite;
     
-    protected AnimationState _currentState;
+    protected string _currentState;
     protected Direction8 _currentDirection;
     protected AnimatedSprite _currentAnimation;
 
@@ -89,7 +89,7 @@ public class CharacterSprite
     /// </remarks>
     public float LayerDepth { get; set; } = 0.0f;
 
-    public AnimationState CurrentState => _currentState;
+    public string CurrentState => _currentState;
     public Direction8 CurrentDirection => _currentDirection;
     public bool CurrentAnimationExists => _currentAnimation != null;
 
@@ -101,11 +101,11 @@ public class CharacterSprite
     /// <param name="use8WayDirections">Whether to use 8-way or 4-way directional animations</param>
     /// <param name="supportedStates">The animation states this character supports</param>
     public CharacterSprite(TextureAtlas atlas, string characterPrefix, bool use8WayDirections = true, 
-        params AnimationState[] supportedStates)
+        params string[] supportedStates)
     {
         _atlas = atlas;
         _use8WayDirections = use8WayDirections;
-        _animations = new Dictionary<(AnimationState, string), AnimatedSprite>();
+    _animations = new Dictionary<(string, string), AnimatedSprite>();
 
         // Try to load placeholder sprite (single frame only)
         try
@@ -122,16 +122,16 @@ public class CharacterSprite
         LoadAnimations(characterPrefix, supportedStates);
         
         // Set initial animation state
-        SetAnimationState(FindBestInitialState(supportedStates));
+    SetAnimationState(FindBestInitialState(supportedStates));
     }
 
     /// <summary>
     /// Finds the best initial animation state that actually has an animation available
     /// </summary>
-    protected virtual AnimationState FindBestInitialState(AnimationState[] supportedStates)
+    protected virtual string FindBestInitialState(string[] supportedStates)
     {
         // Preferred order: Idle -> Walk -> Run -> Attack -> first available
-        var preferredOrder = new[] { AnimationState.Idle, AnimationState.Walk, AnimationState.Run, AnimationState.Attack };
+    var preferredOrder = new[] { AnimationState.Idle, AnimationState.Walk, AnimationState.Run, AnimationState.Attack };
         
         string directionAbbr = DirectionHelper.GetDirectionAbbreviation(_currentDirection, _use8WayDirections);
         
@@ -148,13 +148,13 @@ public class CharacterSprite
         }
         
         // Fallback to the first supported state (even if no animation exists)
-        return supportedStates.Length > 0 ? supportedStates[0] : AnimationState.Idle;
+    return supportedStates.Length > 0 ? supportedStates[0] : AnimationState.Idle;
     }
 
     /// <summary>
     /// Loads all animations for the character
     /// </summary>
-    protected virtual void LoadAnimations(string characterPrefix, AnimationState[] supportedStates)
+    protected virtual void LoadAnimations(string characterPrefix, string[] supportedStates)
     {
         foreach (var state in supportedStates)
         {
@@ -174,15 +174,15 @@ public class CharacterSprite
     /// <summary>
     /// Gets the string representation of an animation state for use in animation names
     /// </summary>
-    protected virtual string GetStateString(AnimationState state)
+    protected virtual string GetStateString(string state)
     {
-        return state.ToString().ToLower();
+        return state.ToLowerInvariant();
     }
 
     /// <summary>
     /// Attempts to load an animation with the given name
     /// </summary>
-    protected virtual void TryLoadAnimation(string animationName, AnimationState state, string directionAbbr)
+    protected virtual void TryLoadAnimation(string animationName, string state, string directionAbbr)
     {
         try
         {
@@ -205,7 +205,7 @@ public class CharacterSprite
     /// <summary>
     /// Sets the current animation state
     /// </summary>
-    public virtual void SetAnimationState(AnimationState state)
+    public virtual void SetAnimationState(string state)
     {
         if (_currentState == state) return;
 

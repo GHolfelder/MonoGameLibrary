@@ -16,8 +16,8 @@ public interface IAIBehavior
     /// <param name="currentPosition">Current position of the character</param>
     /// <param name="currentState">Current animation state</param>
     /// <returns>Tuple containing the desired direction and animation state</returns>
-    (Direction8? direction, AnimationState state) Update(GameTime gameTime,
-        Vector2 currentPosition, AnimationState currentState);
+    (Direction8? direction, string state) Update(GameTime gameTime,
+        Vector2 currentPosition, string currentState);
 }
 
 /// <summary>
@@ -30,8 +30,8 @@ public class WanderBehavior : IAIBehavior
     private Direction8? _currentDirection;
     private readonly float _changeDirectionInterval = 2.0f; // Change direction every 2 seconds
 
-    public (Direction8? direction, AnimationState state) Update(GameTime gameTime,
-        Vector2 currentPosition, AnimationState currentState)
+    public (Direction8? direction, string state) Update(GameTime gameTime,
+        Vector2 currentPosition, string currentState)
     {
         if (gameTime.TotalGameTime.TotalSeconds >= _nextActionTime)
         {
@@ -48,7 +48,7 @@ public class WanderBehavior : IAIBehavior
             _nextActionTime = gameTime.TotalGameTime.TotalSeconds + _changeDirectionInterval;
         }
 
-        AnimationState newState = _currentDirection.HasValue ? AnimationState.Walk : AnimationState.Idle;
+        string newState = _currentDirection.HasValue ? AnimationState.Walk : AnimationState.Idle;
         return (_currentDirection, newState);
     }
 }
