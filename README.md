@@ -139,12 +139,12 @@ atlas.LoadAnimationsFromJson("attack_animations.json");
 This library currently includes a small set of opinionated, game-facing classes under `MonoGameLibrary/Graphics` (and an experimental AI interface under `MonoGameLibrary/AI`) to help you get moving quickly. These are not yet part of the stable, reusable API and will be generalized or moved into samples over time. If you use them, expect breaking changes in future minor versions.
 
 - `Graphics/AnimationState.cs`
-  - What it is: Fixed enum of animation states (Idle, Walk, Run, Attack, Hurt, Death).
-  - Why it’s game-specific: The concrete state set is opinionated and won’t fit all games.
-  - Notes: The `IAIBehavior` interface and `WanderBehavior` example have been moved to `AI/AIBehavior.cs` under the `MonoGameLibrary.AI` namespace.
+  - What it is: Static class of string constants ("idle", "walk", "run", "attack", "hurt", "death"). These keys should match animation names in your atlas/config.
+  - Why it’s game-specific: The provided set is opinionated and may not match all games’ animation taxonomies.
+  - Notes: The `IAIBehavior` interface and `WanderBehavior` example live in `AI/AIBehavior.cs` (`MonoGameLibrary.AI`).
   - Suggested changes (roadmap):
-    - Replace hard-coded enum with user-defined identifiers (e.g., strings or an app-defined enum) or provide an extensible registry.
-    - Keep this enum as a sample reference rather than core API.
+    - Use your own string keys or define your own constants; treat this file as a convenience/sample.
+    - Consider replacing with a game-defined registry or mapping if you need localization or different naming schemes.
 
 - `Graphics/Direction.cs`
   - What it is: `Direction8`, `Direction4`, and `DirectionHelper` utilities (abbreviations, 8-way to 4-way mapping).
@@ -161,6 +161,7 @@ This library currently includes a small set of opinionated, game-facing classes 
     - Abstract animation lookup behind an `IAnimationResolver` so it’s not tied to `TextureAtlas` naming.
     - Consider a `DirectionMode` (FourWay/EightWay) instead of booleans.
     - Replace `Console.WriteLine` with a logging hook; ensure silent behavior in release builds.
+  - Current API note: `supportedStates` is `string[]` (use your own keys or the `AnimationState` constants).
 
 - `Graphics/PlayerSprite.cs`
   - What it is: A player-controlled sprite with keyboard/gamepad handling via `Core.Input` and sprint support.
@@ -169,6 +170,7 @@ This library currently includes a small set of opinionated, game-facing classes 
     - Move to the samples folder; keep the core library input-agnostic.
     - Inject an `IInputProvider` (keyboard/gamepad implementation provided separately) instead of accessing `Core.Input` statically.
     - Keep tuning knobs (`MovementSpeed`, `SprintMultiplier`) as public properties; avoid hidden constants.
+  - Current API note: `supportedStates` is `string[]`.
 
 - `Graphics/NPCSprite.cs`
   - What it is: An NPC sprite driven by `IAIBehavior` (from `MonoGameLibrary.AI`); includes a small `Vector2Extensions.Normalized()` helper.
@@ -177,6 +179,7 @@ This library currently includes a small set of opinionated, game-facing classes 
     - Move to samples or a future `MonoGameLibrary.AI` package.
     - Keep AI behavior injection-based; avoid tight coupling to any one AI system.
     - Relocate generic math helpers (like `Vector2Extensions`) to a utilities file or drop if redundant with MonoGame APIs.
+  - Current API note: `supportedStates` is `string[]`; AI `Update` returns a `string` state key.
 
 - `AI/AIBehavior.cs`
   - What it is: `IAIBehavior` interface and a simple `WanderBehavior` example under the `MonoGameLibrary.AI` namespace (experimental).
