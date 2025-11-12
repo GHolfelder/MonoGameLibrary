@@ -1,4 +1,4 @@
-namespace MonoGameLibrary.Graphics;
+namespace MonoGameLibrary.Utilities;
 
 /// <summary>
 /// Represents the 8 cardinal and intercardinal directions

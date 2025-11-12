@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary;
 using MonoGameLibrary.Input;
+using MonoGameLibrary.Utilities;
 
 namespace MonoGameLibrary.Graphics;
 

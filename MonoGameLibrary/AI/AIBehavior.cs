@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
+using MonoGameLibrary.Utilities;
 
 namespace MonoGameLibrary.AI;
 
