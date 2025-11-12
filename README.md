@@ -138,24 +138,16 @@ atlas.LoadAnimationsFromJson("attack_animations.json");
 
 This library currently includes a small set of opinionated, game-facing classes under `MonoGameLibrary/Graphics` (and an experimental AI interface under `MonoGameLibrary/AI`) to help you get moving quickly. These are not yet part of the stable, reusable API and will be generalized or moved into samples over time. If you use them, expect breaking changes in future minor versions.
 
-- `Graphics/CharacterSprite.cs`
-  - What it is: A base sprite controller that maps (state, direction) → `AnimatedSprite` using a naming pattern; falls back to a placeholder sprite if an animation is missing.
-  - Why it’s game-specific: Assumes a particular naming convention and state/direction model.
-  - Suggested changes (roadmap):
-    - Extract a pluggable naming strategy (e.g., `IAnimationNameFormatter`) instead of the hard-coded "{prefix}_{state}_{dir}" pattern.
-    - Abstract animation lookup behind an `IAnimationResolver` so it’s not tied to `TextureAtlas` naming.
-    - Consider a `DirectionMode` (FourWay/EightWay) instead of booleans.
-    - Replace `Console.WriteLine` with a logging hook; ensure silent behavior in release builds.
-  - Current API note: `supportedStates` is `string[]` (use your own keys or the `AnimationState` constants).
-
 - `Graphics/PlayerSprite.cs`
-  - What it is: A player-controlled sprite with keyboard/gamepad handling via `Core.Input` and sprint support.
-  - Why it’s game-specific: Directly couples gameplay input to rendering/animation.
+  - What it is: A player-controlled sprite that now reads input via an injected `IInputProvider` (keyboard/gamepad implementation provided separately), rather than using `Core.Input` statically.
+  - Why it’s game-specific: Couples gameplay control to animation selection; meant as a starter.
+  - Current API notes:
+    - `supportedStates` is `string[]` (e.g., `AnimationState.Idle`, `"walk"`, etc.).
+    - Inject your own `IInputProvider` or use the default `CoreInputProvider`.
+    - Tuning knobs are public properties: `MovementSpeed` (float, px/s) and `SprintMultiplier` (float).
   - Suggested changes (roadmap):
-    - Move to the samples folder; keep the core library input-agnostic.
-    - Inject an `IInputProvider` (keyboard/gamepad implementation provided separately) instead of accessing `Core.Input` statically.
-    - Keep tuning knobs (`MovementSpeed`, `SprintMultiplier`) as public properties; avoid hidden constants.
-  - Current API note: `supportedStates` is `string[]`.
+    - Keep input provider injection patterns; avoid direct static access to input.
+    - Move this to `/samples` in the future to keep the core library input-agnostic.
 
 - `Graphics/NPCSprite.cs`
   - What it is: An NPC sprite driven by `IAIBehavior` (from `MonoGameLibrary.AI`); includes a small `Vector2Extensions.Normalized()` helper.

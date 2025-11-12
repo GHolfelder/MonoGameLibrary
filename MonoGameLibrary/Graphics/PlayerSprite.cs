@@ -12,8 +12,9 @@ namespace MonoGameLibrary.Graphics;
 /// </summary>
 public class PlayerSprite : CharacterSprite
 {
-    private float _movementSpeed = 100f; // pixels per second
-    private float _sprintMultiplier = 1.5f;
+    private readonly IInputProvider _inputProvider;
+    private float _movementSpeed = 100f; // pixels per second (tuning knob)
+    private float _sprintMultiplier = 1.5f; // tuning knob
     private bool _isMoving = false;
 
     /// <summary>
@@ -47,9 +48,10 @@ public class PlayerSprite : CharacterSprite
     /// <param name="directionMode">Direction mode (FourWay or EightWay)</param>
     /// <param name="supportedStates">The animation states this character supports</param>
     public PlayerSprite(TextureAtlas atlas, string characterPrefix, DirectionMode directionMode = DirectionMode.EightWay, 
-        params string[] supportedStates) 
+        IInputProvider inputProvider = null, params string[] supportedStates) 
         : base(atlas, characterPrefix, directionMode, supportedStates)
     {
+        _inputProvider = inputProvider ?? new CoreInputProvider();
     }
 
     /// <summary>
@@ -66,44 +68,15 @@ public class PlayerSprite : CharacterSprite
     /// </summary>
     protected virtual void HandleInput(GameTime gameTime)
     {
-        var keyboard = Core.Input.Keyboard;
-        var gamePad = Core.Input.GamePads[(int)PlayerIndex.One];
-        
-        Vector2 movementVector = Vector2.Zero;
-        bool isSprinting = false;
+        var (movementVector, isSprinting) = _inputProvider.GetMovement(gameTime);
 
-        // Handle keyboard input
-        if (keyboard.IsKeyDown(Keys.W) || keyboard.IsKeyDown(Keys.Up))
-            movementVector.Y -= 1;
-        if (keyboard.IsKeyDown(Keys.S) || keyboard.IsKeyDown(Keys.Down))
-            movementVector.Y += 1;
-        if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left))
-            movementVector.X -= 1;
-        if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right))
-            movementVector.X += 1;
-
-        // Check for sprint input
-        isSprinting = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.Space);
-
-        // Handle gamepad input (takes priority over keyboard if connected)
-        if (gamePad.IsConnected)
-        {
-            Vector2 thumbstick = gamePad.LeftThumbStick;
-            if (thumbstick.LengthSquared() > 0.1f) // Dead zone
-            {
-                movementVector = new Vector2(thumbstick.X, -thumbstick.Y); // Invert Y for screen coordinates
-            }
-            
-            // Gamepad sprint button
-            if (gamePad.IsButtonDown(Buttons.A) || gamePad.IsButtonDown(Buttons.X))
-                isSprinting = true;
-        }
-
-        // Apply movement
+        // Apply movement & animation selection
         if (movementVector.LengthSquared() > 0)
         {
             // Normalize diagonal movement
-            movementVector.Normalize();
+            // (Already normalized by provider, but safe if custom impl skipped it)
+            if (movementVector.LengthSquared() > 1.0001f)
+                movementVector.Normalize();
             
             // Calculate movement speed
             float currentSpeed = _movementSpeed;
