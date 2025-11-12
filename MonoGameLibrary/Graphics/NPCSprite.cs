@@ -49,11 +49,11 @@ public class NPCSprite : CharacterSprite
     /// <param name="atlas">The texture atlas containing the animations</param>
     /// <param name="characterPrefix">The prefix for animation names (e.g., "npc")</param>
     /// <param name="aiBehavior">The AI behavior for this NPC</param>
-    /// <param name="use8WayDirections">Whether to use 8-way or 4-way directional animations</param>
+    /// <param name="directionMode">Direction mode (FourWay or EightWay)</param>
     /// <param name="supportedStates">The animation states this character supports</param>
     public NPCSprite(TextureAtlas atlas, string characterPrefix, IAIBehavior aiBehavior,
-        bool use8WayDirections = true, params string[] supportedStates)
-        : base(atlas, characterPrefix, use8WayDirections, supportedStates)
+        DirectionMode directionMode = DirectionMode.EightWay, params string[] supportedStates)
+        : base(atlas, characterPrefix, directionMode, supportedStates)
     {
         _aiBehavior = aiBehavior;
     }

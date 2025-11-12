@@ -138,21 +138,6 @@ atlas.LoadAnimationsFromJson("attack_animations.json");
 
 This library currently includes a small set of opinionated, game-facing classes under `MonoGameLibrary/Graphics` (and an experimental AI interface under `MonoGameLibrary/AI`) to help you get moving quickly. These are not yet part of the stable, reusable API and will be generalized or moved into samples over time. If you use them, expect breaking changes in future minor versions.
 
-- `Graphics/AnimationState.cs`
-  - What it is: Static class of string constants ("idle", "walk", "run", "attack", "hurt", "death"). These keys should match animation names in your atlas/config.
-  - Why it’s game-specific: The provided set is opinionated and may not match all games’ animation taxonomies.
-  - Notes: The `IAIBehavior` interface and `WanderBehavior` example live in `AI/AIBehavior.cs` (`MonoGameLibrary.AI`).
-  - Suggested changes (roadmap):
-    - Use your own string keys or define your own constants; treat this file as a convenience/sample.
-    - Consider replacing with a game-defined registry or mapping if you need localization or different naming schemes.
-
-- `Graphics/Direction.cs`
-  - What it is: `Direction8`, `Direction4`, and `DirectionHelper` utilities (abbreviations, 8-way to 4-way mapping).
-  - Why it’s borderline: These are generally useful, but their location under Graphics is debatable.
-  - Suggested changes (roadmap):
-    - Move to a utility namespace (e.g., `MonoGameLibrary` or `MonoGameLibrary.Utilities`).
-    - Keep the helper small and dependency-free; consider adding vector conversion helpers as needed.
-
 - `Graphics/CharacterSprite.cs`
   - What it is: A base sprite controller that maps (state, direction) → `AnimatedSprite` using a naming pattern; falls back to a placeholder sprite if an animation is missing.
   - Why it’s game-specific: Assumes a particular naming convention and state/direction model.

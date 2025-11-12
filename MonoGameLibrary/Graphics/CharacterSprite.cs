@@ -14,16 +14,15 @@ namespace MonoGameLibrary.Graphics;
 public class CharacterSprite
 {
     protected readonly Dictionary<(string state, string direction), AnimatedSprite> _animations;
-    protected readonly TextureAtlas _atlas;
-    protected readonly bool _use8WayDirections;
+    protected readonly IAnimationResolver _animationResolver;
+    protected readonly IAnimationNameFormatter _nameFormatter;
+    protected readonly DirectionMode _directionMode;
+    protected readonly ILogger _logger;
     protected readonly Sprite _placeholderSprite;
     
     protected string _currentState;
     protected Direction8 _currentDirection;
     protected AnimatedSprite _currentAnimation;
-
-    // Animation naming pattern - should be overridable by derived classes
-    protected virtual string AnimationNamePattern => "{0}_{1}_{2}"; // e.g., "player_walk_S"
 
     // Debug property to force placeholder display
     public bool ForceShowPlaceholder { get; set; } = false;
@@ -95,35 +94,45 @@ public class CharacterSprite
     public bool CurrentAnimationExists => _currentAnimation != null;
 
     /// <summary>
-    /// Creates a new CharacterSprite
+    /// Creates a new CharacterSprite using a TextureAtlas (convenience constructor)
     /// </summary>
     /// <param name="atlas">The texture atlas containing the animations</param>
     /// <param name="characterPrefix">The prefix for animation names (e.g., "player")</param>
-    /// <param name="use8WayDirections">Whether to use 8-way or 4-way directional animations</param>
+    /// <param name="directionMode">Direction mode (FourWay or EightWay)</param>
     /// <param name="supportedStates">The animation states this character supports</param>
-    public CharacterSprite(TextureAtlas atlas, string characterPrefix, bool use8WayDirections = true, 
+    public CharacterSprite(TextureAtlas atlas, string characterPrefix, DirectionMode directionMode = DirectionMode.EightWay, 
         params string[] supportedStates)
+        : this(new TextureAtlasAnimationResolver(atlas), new DefaultAnimationNameFormatter(), 
+               characterPrefix, directionMode, NullLogger.Instance, supportedStates)
     {
-        _atlas = atlas;
-        _use8WayDirections = use8WayDirections;
-    _animations = new Dictionary<(string, string), AnimatedSprite>();
+    }
+
+    /// <summary>
+    /// Creates a new CharacterSprite with full control over dependencies
+    /// </summary>
+    /// <param name="animationResolver">Animation resolver for loading sprites</param>
+    /// <param name="nameFormatter">Formatter for animation names</param>
+    /// <param name="characterPrefix">The prefix for animation names (e.g., "player")</param>
+    /// <param name="directionMode">Direction mode (FourWay or EightWay)</param>
+    /// <param name="logger">Logger for diagnostic messages</param>
+    /// <param name="supportedStates">The animation states this character supports</param>
+    public CharacterSprite(IAnimationResolver animationResolver, IAnimationNameFormatter nameFormatter,
+        string characterPrefix, DirectionMode directionMode, ILogger logger, params string[] supportedStates)
+    {
+        _animationResolver = animationResolver ?? throw new ArgumentNullException(nameof(animationResolver));
+        _nameFormatter = nameFormatter ?? throw new ArgumentNullException(nameof(nameFormatter));
+        _directionMode = directionMode;
+        _logger = logger ?? NullLogger.Instance;
+        _animations = new Dictionary<(string, string), AnimatedSprite>();
 
         // Try to load placeholder sprite (single frame only)
-        try
-        {
-            _placeholderSprite = _atlas.CreateSprite("placeholder");
-        }
-        catch
-        {
-            // Placeholder sprite doesn't exist - will be null
-            _placeholderSprite = null;
-        }
+        _placeholderSprite = _animationResolver.TryCreateSprite("placeholder");
 
         // Load animations for all supported states and directions
         LoadAnimations(characterPrefix, supportedStates);
         
         // Set initial animation state
-    SetAnimationState(FindBestInitialState(supportedStates));
+        SetAnimationState(FindBestInitialState(supportedStates));
     }
 
     /// <summary>
@@ -132,9 +141,9 @@ public class CharacterSprite
     protected virtual string FindBestInitialState(string[] supportedStates)
     {
         // Preferred order: Idle -> Walk -> Run -> Attack -> first available
-    var preferredOrder = new[] { AnimationState.Idle, AnimationState.Walk, AnimationState.Run, AnimationState.Attack };
+        var preferredOrder = new[] { AnimationState.Idle, AnimationState.Walk, AnimationState.Run, AnimationState.Attack };
         
-        string directionAbbr = DirectionHelper.GetDirectionAbbreviation(_currentDirection, _use8WayDirections);
+        string directionAbbr = DirectionHelper.GetDirectionAbbreviation(_currentDirection, _directionMode);
         
         foreach (var preferredState in preferredOrder)
         {
@@ -149,7 +158,7 @@ public class CharacterSprite
         }
         
         // Fallback to the first supported state (even if no animation exists)
-    return supportedStates.Length > 0 ? supportedStates[0] : AnimationState.Idle;
+        return supportedStates.Length > 0 ? supportedStates[0] : AnimationState.Idle;
     }
 
     /// <summary>
@@ -161,8 +170,8 @@ public class CharacterSprite
         {
             foreach (Direction8 direction in Enum.GetValues<Direction8>())
             {
-                string directionAbbr = DirectionHelper.GetDirectionAbbreviation(direction, _use8WayDirections);
-                string animationName = string.Format(AnimationNamePattern, 
+                string directionAbbr = DirectionHelper.GetDirectionAbbreviation(direction, _directionMode);
+                string animationName = _nameFormatter.FormatAnimationName(
                     characterPrefix, 
                     GetStateString(state), 
                     directionAbbr);
@@ -185,21 +194,15 @@ public class CharacterSprite
     /// </summary>
     protected virtual void TryLoadAnimation(string animationName, string state, string directionAbbr)
     {
-        try
+        var animation = _animationResolver.TryCreateAnimatedSprite(animationName);
+        if (animation != null)
         {
-            var animation = _atlas.CreateAnimatedSprite(animationName);
-            if (animation != null)
-            {
-                _animations[(state, directionAbbr)] = animation;
-            }
+            _animations[(state, directionAbbr)] = animation;
         }
-        catch (Exception ex)
+        else
         {
             // Animation doesn't exist - this is expected for missing animations
-            // Only log in debug builds to avoid spam
-            #if DEBUG
-            Console.WriteLine($"Debug: Animation '{animationName}' not found: {ex.GetType().Name}");
-            #endif
+            _logger.LogInfo($"Animation '{animationName}' not found");
         }
     }
 
@@ -231,7 +234,7 @@ public class CharacterSprite
     /// </summary>
     protected virtual void UpdateCurrentAnimation()
     {
-        string directionAbbr = DirectionHelper.GetDirectionAbbreviation(_currentDirection, _use8WayDirections);
+        string directionAbbr = DirectionHelper.GetDirectionAbbreviation(_currentDirection, _directionMode);
         
         // Try to get the requested animation
         if (_animations.TryGetValue((_currentState, directionAbbr), out var animation))
@@ -243,7 +246,7 @@ public class CharacterSprite
         {
             // Animation doesn't exist - log error and show placeholder
             string animationKey = $"{_currentState}_{directionAbbr}";
-            Console.WriteLine($"ERROR: Animation '{animationKey}' does not exist. Showing placeholder.");
+            _logger.LogError($"Animation '{animationKey}' does not exist. Showing placeholder.");
             _currentAnimation = null;
         }
     }

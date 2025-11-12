@@ -44,11 +44,11 @@ public class PlayerSprite : CharacterSprite
     /// </summary>
     /// <param name="atlas">The texture atlas containing the animations</param>
     /// <param name="characterPrefix">The prefix for animation names (e.g., "player")</param>
-    /// <param name="use8WayDirections">Whether to use 8-way or 4-way directional animations</param>
+    /// <param name="directionMode">Direction mode (FourWay or EightWay)</param>
     /// <param name="supportedStates">The animation states this character supports</param>
-    public PlayerSprite(TextureAtlas atlas, string characterPrefix, bool use8WayDirections = true, 
+    public PlayerSprite(TextureAtlas atlas, string characterPrefix, DirectionMode directionMode = DirectionMode.EightWay, 
         params string[] supportedStates) 
-        : base(atlas, characterPrefix, use8WayDirections, supportedStates)
+        : base(atlas, characterPrefix, directionMode, supportedStates)
     {
     }
 

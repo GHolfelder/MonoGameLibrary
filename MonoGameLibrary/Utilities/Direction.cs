@@ -27,6 +27,22 @@ public enum Direction4
 }
 
 /// <summary>
+/// Specifies whether to use 4-way or 8-way directional movement/animations
+/// </summary>
+public enum DirectionMode
+{
+    /// <summary>
+    /// Use 4 cardinal directions (N, E, S, W)
+    /// </summary>
+    FourWay,
+    
+    /// <summary>
+    /// Use 8 directions including diagonals (N, NE, E, SE, S, SW, W, NW)
+    /// </summary>
+    EightWay
+}
+
+/// <summary>
 /// Utility methods for working with directions
 /// </summary>
 public static class DirectionHelper
@@ -48,12 +64,13 @@ public static class DirectionHelper
 
     /// <summary>
     /// Gets the direction abbreviation for use in animation names
-    /// If use8Way is true, returns one of: N, NE, E, SE, S, SW, W, NW
-    /// If use8Way is false, converts to 4-way and returns one of: N, E, S, W
     /// </summary>
-    public static string GetDirectionAbbreviation(Direction8 direction, bool use8Way = true)
+    /// <param name="direction">The 8-way direction</param>
+    /// <param name="mode">Direction mode (FourWay or EightWay)</param>
+    /// <returns>Direction abbreviation string</returns>
+    public static string GetDirectionAbbreviation(Direction8 direction, DirectionMode mode = DirectionMode.EightWay)
     {
-        if (use8Way)
+        if (mode == DirectionMode.EightWay)
         {
             return direction switch
             {
