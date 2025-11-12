@@ -134,6 +134,55 @@ atlas.LoadAnimationsFromJson("attack_animations.json");
 - MonoGame Framework
 - System.Text.Json (for JSON configuration support)
 
+## Game-specific classes (temporary, to be generalized)
+
+This library currently includes a small set of opinionated, game-facing classes under `MonoGameLibrary/Graphics` to help you get moving quickly. These are not yet part of the stable, reusable API and will be generalized or moved into samples over time. If you use them, expect breaking changes in future minor versions.
+
+- `Graphics/AnimationState.cs`
+  - What it is: Fixed enum of animation states (Idle, Walk, Run, Attack, Hurt, Death) plus an `IAIBehavior` contract and a simple `WanderBehavior` example.
+  - Why it’s game-specific: The concrete state set and bundled AI concepts are opinionated and won’t fit all games.
+  - Suggested changes (roadmap):
+    - Replace hard-coded enum with user-defined identifiers (e.g., strings or an app-defined enum) or provide an extensible registry.
+    - Move `IAIBehavior` and `WanderBehavior` to a future `MonoGameLibrary.AI` namespace or to the samples folder.
+    - Keep this file as a sample reference rather than core API.
+
+- `Graphics/Direction.cs`
+  - What it is: `Direction8`, `Direction4`, and `DirectionHelper` utilities (abbreviations, 8-way to 4-way mapping).
+  - Why it’s borderline: These are generally useful, but their location under Graphics is debatable.
+  - Suggested changes (roadmap):
+    - Move to a utility namespace (e.g., `MonoGameLibrary` or `MonoGameLibrary.Utilities`).
+    - Keep the helper small and dependency-free; consider adding vector conversion helpers as needed.
+
+- `Graphics/CharacterSprite.cs`
+  - What it is: A base sprite controller that maps (state, direction) → `AnimatedSprite` using a naming pattern; falls back to a placeholder sprite if an animation is missing.
+  - Why it’s game-specific: Assumes a particular naming convention and state/direction model.
+  - Suggested changes (roadmap):
+    - Extract a pluggable naming strategy (e.g., `IAnimationNameFormatter`) instead of the hard-coded "{prefix}_{state}_{dir}" pattern.
+    - Abstract animation lookup behind an `IAnimationResolver` so it’s not tied to `TextureAtlas` naming.
+    - Consider a `DirectionMode` (FourWay/EightWay) instead of booleans.
+    - Replace `Console.WriteLine` with a logging hook; ensure silent behavior in release builds.
+
+- `Graphics/PlayerSprite.cs`
+  - What it is: A player-controlled sprite with keyboard/gamepad handling via `Core.Input` and sprint support.
+  - Why it’s game-specific: Directly couples gameplay input to rendering/animation.
+  - Suggested changes (roadmap):
+    - Move to the samples folder; keep the core library input-agnostic.
+    - Inject an `IInputProvider` (keyboard/gamepad implementation provided separately) instead of accessing `Core.Input` statically.
+    - Keep tuning knobs (`MovementSpeed`, `SprintMultiplier`) as public properties; avoid hidden constants.
+
+- `Graphics/NPCSprite.cs`
+  - What it is: An NPC sprite driven by `IAIBehavior`; includes a small `Vector2Extensions.Normalized()` helper.
+  - Why it’s game-specific: Bakes a particular movement model and behavior interface into the sprite.
+  - Suggested changes (roadmap):
+    - Move to samples or a future `MonoGameLibrary.AI` package.
+    - Keep AI behavior injection-based; avoid tight coupling to any one AI system.
+    - Relocate generic math helpers (like `Vector2Extensions`) to a utilities file or drop if redundant with MonoGame APIs.
+
+### Using these classes today
+- Treat them as examples or starters rather than stable API.
+- Prefer composition: keep your own game logic outside and feed state/direction into sprites.
+- If you fork/modify, consider moving them to your game project while the library evolves the generalized equivalents.
+
 ## License
 
 [Add your license information here]
