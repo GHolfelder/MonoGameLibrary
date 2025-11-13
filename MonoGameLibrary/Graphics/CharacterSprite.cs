@@ -20,7 +20,7 @@ public class CharacterSprite
     protected readonly ILogger _logger;
     protected readonly Sprite _placeholderSprite;
     
-    protected string _currentState;
+    protected string _currentState = string.Empty;
     protected Direction8 _currentDirection;
     protected AnimatedSprite _currentAnimation;
 
