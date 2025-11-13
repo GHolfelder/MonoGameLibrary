@@ -361,9 +361,35 @@ public class TextureAtlas
     /// </summary>
     /// <param name="name">The name of the region to retrieve.</param>
     /// <returns>The TextureRegion with the specified name.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when the region name is not found.</exception>
     public TextureRegion GetRegion(string name)
     {
-        return _regions[name];
+        if (!_regions.TryGetValue(name, out var region))
+        {
+            throw new KeyNotFoundException($"Texture region '{name}' was not found in the atlas.");
+        }
+        return region;
+    }
+
+    /// <summary>
+    /// Tries to get the region from this texture atlas with the specified name.
+    /// </summary>
+    /// <param name="name">The name of the region to retrieve.</param>
+    /// <param name="region">The TextureRegion if found, otherwise null.</param>
+    /// <returns>true if the region was found; otherwise, false.</returns>
+    public bool TryGetRegion(string name, out TextureRegion region)
+    {
+        return _regions.TryGetValue(name, out region);
+    }
+
+    /// <summary>
+    /// Checks if a region with the specified name exists in this texture atlas.
+    /// </summary>
+    /// <param name="name">The name of the region to check.</param>
+    /// <returns>true if the region exists; otherwise, false.</returns>
+    public bool HasRegion(string name)
+    {
+        return _regions.ContainsKey(name);
     }
 
     /// <summary>
@@ -400,9 +426,35 @@ public class TextureAtlas
     /// </summary>
     /// <param name="animationName">The name of the animation to retrieve.</param>
     /// <returns>The animation with the specified name.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when the animation name is not found.</exception>
     public Animation GetAnimation(string animationName)
     {
-        return _animations[animationName];
+        if (!_animations.TryGetValue(animationName, out var animation))
+        {
+            throw new KeyNotFoundException($"Animation '{animationName}' was not found in the atlas.");
+        }
+        return animation;
+    }
+
+    /// <summary>
+    /// Tries to get the animation from this texture atlas with the specified name.
+    /// </summary>
+    /// <param name="animationName">The name of the animation to retrieve.</param>
+    /// <param name="animation">The Animation if found, otherwise null.</param>
+    /// <returns>true if the animation was found; otherwise, false.</returns>
+    public bool TryGetAnimation(string animationName, out Animation animation)
+    {
+        return _animations.TryGetValue(animationName, out animation);
+    }
+
+    /// <summary>
+    /// Checks if an animation with the specified name exists in this texture atlas.
+    /// </summary>
+    /// <param name="animationName">The name of the animation to check.</param>
+    /// <returns>true if the animation exists; otherwise, false.</returns>
+    public bool HasAnimation(string animationName)
+    {
+        return _animations.ContainsKey(animationName);
     }
 
     /// <summary>
