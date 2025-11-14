@@ -1,4 +1,4 @@
-namespace MonoGameLibrary;
+namespace MonoGameLibrary.Utilities;
 
 /// <summary>
 /// Interface for logging messages
