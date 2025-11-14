@@ -1,0 +1,207 @@
+name: Package and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      version:
+        description: 'Package version (e.g., 1.0.1)'
+        required: true
+        default: '1.0.1'
+      version_suffix:
+        description: 'Version suffix (e.g., alpha, beta, rc1) - leave empty for stable'
+        required: false
+        default: ''
+      publish_to_nuget:
+        description: 'Publish to NuGet.org'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+      create_github_release:
+        description: 'Create GitHub release'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+      build_configuration:
+        description: 'Build configuration'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - 'Release'
+        - 'Debug'
+      run_tests:
+        description: 'Run tests before packaging'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  package:
+    name: Build and Package
+    runs-on: windows-latest
+    
+    outputs:
+      package-version: ${{ steps.version.outputs.version }}
+      package-file: ${{ steps.package.outputs.package-file }}
+      full-version: ${{ steps.version.outputs.full-version }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Get full history for version calculation
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Calculate version
+      id: version
+      run: |
+        if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -like "refs/tags/v*") {
+          $version = "${{ github.ref_name }}" -replace "^v", ""
+          $fullVersion = $version
+        } elseif ("${{ github.event_name }}" -eq "workflow_dispatch") {
+          $version = "${{ github.event.inputs.version }}"
+          $suffix = "${{ github.event.inputs.version_suffix }}"
+          if ($suffix -and $suffix.Trim() -ne "") {
+            $fullVersion = "$version-$suffix"
+          } else {
+            $fullVersion = $version
+          }
+        } else {
+          $version = "1.0.0"
+          $fullVersion = "1.0.0-preview-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        }
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "full-version=$fullVersion" >> $env:GITHUB_OUTPUT
+        echo "Package version: $fullVersion"
+      shell: powershell
+      
+    - name: Update project version
+      run: |
+        $version = "${{ steps.version.outputs.full-version }}"
+        $projectFile = "MonoGameLibrary/MonoGameLibrary.csproj"
+        $content = Get-Content $projectFile -Raw
+        $content = $content -replace '<Version>.*</Version>', "<Version>$version</Version>"
+        Set-Content $projectFile -Value $content
+        echo "Updated version to $version"
+      shell: powershell
+      
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration ${{ github.event.inputs.build_configuration || 'Release' }} --no-restore
+      
+    - name: Run tests
+      if: ${{ github.event.inputs.run_tests != 'false' }}
+      run: dotnet test --configuration ${{ github.event.inputs.build_configuration || 'Release' }} --no-build --verbosity normal
+      
+    - name: Pack NuGet package
+      id: package
+      run: |
+        dotnet pack MonoGameLibrary/MonoGameLibrary.csproj --configuration ${{ github.event.inputs.build_configuration || 'Release' }} --no-build --output ./packages
+        $packageFile = Get-ChildItem ./packages/*.nupkg | Select-Object -First 1 -ExpandProperty Name
+        echo "package-file=$packageFile" >> $env:GITHUB_OUTPUT
+        echo "Package file: $packageFile"
+      shell: powershell
+      
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package-${{ steps.version.outputs.full-version }}
+        path: ./packages/*.nupkg
+        
+  publish-nuget:
+    name: Publish to NuGet
+    runs-on: ubuntu-latest
+    needs: package
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_to_nuget == 'true')
+    
+    steps:
+    - name: Download package artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: nuget-package-${{ needs.package.outputs.full-version }}
+        path: ./packages
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Publish to NuGet.org
+      run: |
+        dotnet nuget push ./packages/*.nupkg \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
+          
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [package, publish-nuget]
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.create_github_release == 'true')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download package artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: nuget-package-${{ needs.package.outputs.full-version }}
+        path: ./packages
+        
+    - name: Generate release notes
+      id: release-notes
+      run: |
+        echo "## Release Notes for ${{ needs.package.outputs.full-version }}" > release_notes.md
+        echo "" >> release_notes.md
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "### Manual Release" >> release_notes.md
+          echo "This release was created manually with the following settings:" >> release_notes.md
+          echo "- **Build Configuration**: ${{ github.event.inputs.build_configuration }}" >> release_notes.md
+          echo "- **Tests Run**: ${{ github.event.inputs.run_tests }}" >> release_notes.md
+          echo "- **Published to NuGet**: ${{ github.event.inputs.publish_to_nuget }}" >> release_notes.md
+        else
+          echo "### Changes" >> release_notes.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> release_notes.md || echo "- Initial release" >> release_notes.md
+        fi
+        echo "" >> release_notes.md
+        echo "### Package Information" >> release_notes.md
+        echo "- **Version**: ${{ needs.package.outputs.full-version }}" >> release_notes.md
+        echo "- **Package**: ${{ needs.package.outputs.package-file }}" >> release_notes.md
+        echo "- **Target Framework**: .NET 9.0" >> release_notes.md
+        echo "- **Dependencies**: MonoGame.Framework.DesktopGL, System.Text.Json" >> release_notes.md
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ needs.package.outputs.full-version }}
+        tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', needs.package.outputs.full-version) || github.ref_name }}
+        body_path: release_notes.md
+        files: ./packages/*.nupkg
+        draft: false
+        prerelease: ${{ contains(needs.package.outputs.full-version, 'preview') || contains(needs.package.outputs.full-version, 'alpha') || contains(needs.package.outputs.full-version, 'beta') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

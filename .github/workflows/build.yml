@@ -1,0 +1,95 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Enable manual trigger
+    inputs:
+      build_configuration:
+        description: 'Build configuration'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - 'Release'
+        - 'Debug'
+      run_tests:
+        description: 'Run tests'
+        required: true
+        default: true
+        type: boolean
+      target_os:
+        description: 'Target operating systems'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - 'all'
+        - 'windows-latest'
+        - 'ubuntu-latest'
+        - 'macOS-latest'
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macOS-latest]
+        
+    steps:
+    - name: Check if should run
+      id: should-run
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.target_os }}" != "all" ] && [ "${{ github.event.inputs.target_os }}" != "${{ matrix.os }}" ]; then
+          echo "skip=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip=false" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+      
+    - name: Checkout code
+      if: steps.should-run.outputs.skip != 'true'
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      if: steps.should-run.outputs.skip != 'true'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Cache NuGet packages
+      if: steps.should-run.outputs.skip != 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      if: steps.should-run.outputs.skip != 'true'
+      run: dotnet restore
+      
+    - name: Build
+      if: steps.should-run.outputs.skip != 'true'
+      run: dotnet build --configuration ${{ github.event.inputs.build_configuration || 'Release' }} --no-restore
+      
+    - name: Test
+      if: steps.should-run.outputs.skip != 'true' && github.event.inputs.run_tests != 'false'
+      run: dotnet test --configuration ${{ github.event.inputs.build_configuration || 'Release' }} --no-build --verbosity normal
+      
+    - name: Pack
+      if: steps.should-run.outputs.skip != 'true'
+      run: dotnet pack --configuration ${{ github.event.inputs.build_configuration || 'Release' }} --no-build --output ./artifacts
+      
+    - name: Upload build artifacts
+      if: steps.should-run.outputs.skip != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages-${{ matrix.os }}-${{ github.event.inputs.build_configuration || 'Release' }}
+        path: ./artifacts/*.nupkg
+        retention-days: 7

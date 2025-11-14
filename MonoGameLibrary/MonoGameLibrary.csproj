@@ -4,18 +4,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>MonoGameLibrary</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>Your Name</Authors>
-    <Description>A comprehensive utility library for MonoGame development, providing graphics, input, audio, and scene management utilities.</Description>
-    <PackageTags>MonoGame;GameDevelopment;Graphics;Animation;Input;Audio</PackageTags>
+    <Version>1.0.1</Version>
+    <Authors>MonoGame Library Contributors</Authors>
+    <Description>A comprehensive utility library for MonoGame development, providing graphics, input, audio, and scene management utilities with automatic resource management.</Description>
+    <PackageTags>MonoGame;GameDevelopment;Graphics;Animation;Input;Audio;Scene;Utilities</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/yourusername/MonoGameLibrary</RepositoryUrl>
+    <RepositoryUrl>https://github.com/GHolfelder/MonoGameLibrary</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/GHolfelder/MonoGameLibrary</PackageProjectUrl>
+    <Copyright>© 2024 MonoGame Library Contributors</Copyright>
+    <Company>MonoGame Library</Company>
+    <Product>MonoGame Library</Product>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*">
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>
+    <!-- Remove PrivateAssets to ensure dependency is included in package -->
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.2.1105" />
     <PackageReference Include="System.Text.Json" Version="9.0.10" />
   </ItemGroup>
   <ItemGroup>

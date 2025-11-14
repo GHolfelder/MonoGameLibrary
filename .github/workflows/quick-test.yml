@@ -1,0 +1,65 @@
+name: Quick Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: 'Test filter (leave empty to run all tests)'
+        required: false
+        default: ''
+      verbosity:
+        description: 'Test output verbosity'
+        required: true
+        default: 'normal'
+        type: choice
+        options:
+        - 'quiet'
+        - 'minimal'
+        - 'normal'
+        - 'detailed'
+        - 'diagnostic'
+      collect_coverage:
+        description: 'Collect code coverage'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  quick-test:
+    name: Quick Test Run
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Debug --no-restore
+      
+    - name: Run tests
+      run: |
+        $testCmd = "dotnet test --configuration Debug --no-build --verbosity ${{ github.event.inputs.verbosity }}"
+        if ("${{ github.event.inputs.test_filter }}" -ne "") {
+          $testCmd += " --filter `"${{ github.event.inputs.test_filter }}`""
+        }
+        if ("${{ github.event.inputs.collect_coverage }}" -eq "true") {
+          $testCmd += " --collect:`"XPlat Code Coverage`" --results-directory ./coverage"
+        }
+        Invoke-Expression $testCmd
+      shell: powershell
+      
+    - name: Upload coverage reports
+      if: ${{ github.event.inputs.collect_coverage == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ./coverage/**/*
+        retention-days: 7
