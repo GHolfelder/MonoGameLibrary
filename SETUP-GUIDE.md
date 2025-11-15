@@ -10,29 +10,27 @@ The workflows are now configured and ready to use! Here's what you get:
 - ✅ **Automated builds** on every push/PR
 - ✅ **Multi-platform testing** (Windows, Linux, macOS)
 - ✅ **NuGet package generation**
-- ✅ **Automated publishing** to NuGet.org
+- ✅ **Automated publishing** to NuGet.org via Trusted Publishing
 - ✅ **GitHub releases** with changelogs
 - ✅ **Security scanning** with CodeQL
 - ✅ **Dependency updates** via Dependabot
 
-### 2. **Required Setup: NuGet API Key**
+### 2. **Trusted Publishing Setup (Recommended)**
 
-To enable automatic NuGet publishing, you need to add your API key:
+This repository is configured to use GitHub's trusted publishing for NuGet, which is more secure than API keys.
 
-1. **Get your NuGet API Key**:
-   - Go to https://www.nuget.org/account/apikeys
-   - Click "Create" 
-   - Name: `MonoGameLibrary`
-   - Scopes: Select "Push new packages and package versions"
-   - Glob Pattern: `MonoGameLibrary*`
-   - Copy the generated key
+**Your Configuration:**
+- ✅ **Package Owner**: gholfelder
+- ✅ **Repository**: GHolfelder/MonoGameLibrary
+- ✅ **Workflow**: build.yml
+- ✅ **Environment**: package
 
-2. **Add to GitHub Secrets**:
-   - Go to your GitHub repo → Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Name: `NUGET_API_KEY`
-   - Value: Paste your API key
-   - Click "Add secret"
+**How It Works:**
+- No API keys needed in GitHub Secrets
+- GitHub automatically authenticates with NuGet.org using OIDC
+- More secure and easier to manage
+
+**Already Set Up!** Your trusted publishing configuration is active and ready to use.
 
 ### 3. **Your First Release**
 
@@ -157,7 +155,8 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 ## 🛠️ Troubleshooting
 
 ### **Workflow Failed to Publish to NuGet**
-- Check that `NUGET_API_KEY` secret is properly set
+- Check that GitHub environment "package" is properly configured
+- Ensure trusted publishing is set up correctly in your NuGet account
 - Ensure version number is unique (increment version)
 - Verify package ID doesn't conflict with existing packages
 
