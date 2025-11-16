@@ -152,21 +152,37 @@ jobs:
       with:
         dotnet-version: '9.0.x'
         
-    - name: Manual NuGet Push Test
+    - name: Debug and try alternative approaches
       run: |
-        echo "Testing pure trusted publishing approach..."
+        echo "=== DEBUGGING TRUSTED PUBLISHING ISSUE ==="
         echo "Repository: ${{ github.repository }}" 
         echo "Ref: ${{ github.ref }}"
-        echo "Actor: ${{ github.actor }}"
-        
-        # List what we have
+        echo "Workflow: package.yml"
+        echo "Environment: production"
+        echo ""
+        echo "=== Package Info ==="
         ls -la ./packages/
+        echo ""
+        echo "=== .NET Version ==="
+        dotnet --version
+        echo ""
+        echo "=== NuGet Sources ==="
+        dotnet nuget list source
+        echo ""
         
-        # Simple push without any authentication - pure trusted publishing
-        # Valid options for dotnet nuget push: --source, --skip-duplicate, --no-service-endpoint
+        # Try 1: Use mono with nuget.exe (Linux compatible)
+        echo "=== Attempt 1: Using nuget.exe with mono ==="
+        wget -q https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+        mono nuget.exe push ./packages/*.nupkg -Source https://api.nuget.org/v3/index.json -SkipDuplicate || echo "Nuget.exe failed"
+        echo ""
+        
+        # Try 2: Force disable service endpoint
+        echo "=== Attempt 2: Disable service endpoint ==="
         dotnet nuget push ./packages/*.nupkg \
           --source https://api.nuget.org/v3/index.json \
-          --skip-duplicate
+          --no-service-endpoint \
+          --skip-duplicate || echo "No service endpoint failed"
+        echo ""
           
   create-release:
     name: Create GitHub Release
