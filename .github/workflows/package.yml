@@ -152,37 +152,40 @@ jobs:
       with:
         dotnet-version: '9.0.x'
         
-    - name: Debug and try alternative approaches
+    - name: Get OIDC Token and test direct API approach
+      id: oidc-token
       run: |
-        echo "=== DEBUGGING TRUSTED PUBLISHING ISSUE ==="
-        echo "Repository: ${{ github.repository }}" 
-        echo "Ref: ${{ github.ref }}"
-        echo "Workflow: package.yml"
-        echo "Environment: production"
-        echo ""
-        echo "=== Package Info ==="
-        ls -la ./packages/
-        echo ""
-        echo "=== .NET Version ==="
-        dotnet --version
-        echo ""
-        echo "=== NuGet Sources ==="
-        dotnet nuget list source
-        echo ""
+        echo "=== GETTING OIDC TOKEN FOR NUGET ==="
         
-        # Try 1: Use mono with nuget.exe (Linux compatible)
-        echo "=== Attempt 1: Using nuget.exe with mono ==="
-        wget -q https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-        mono nuget.exe push ./packages/*.nupkg -Source https://api.nuget.org/v3/index.json -SkipDuplicate || echo "Nuget.exe failed"
-        echo ""
+        # Get the OIDC token that NuGet.org expects
+        OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.nuget.org" | jq -r '.value')
         
-        # Try 2: Force disable service endpoint
-        echo "=== Attempt 2: Disable service endpoint ==="
+        echo "OIDC Token received: ${OIDC_TOKEN:0:50}..."
+        echo "oidc-token=$OIDC_TOKEN" >> $GITHUB_OUTPUT
+        
+        # Try using the OIDC token directly with NuGet API
+        echo "=== Attempting direct NuGet v3 API call ==="
+        
+        PACKAGE_FILE=$(ls ./packages/*.nupkg | head -1)
+        echo "Pushing: $PACKAGE_FILE"
+        
+        # Use the OIDC token as bearer token for NuGet API
+        curl -v -X PUT \
+          -H "Authorization: Bearer $OIDC_TOKEN" \
+          -H "Content-Type: application/octet-stream" \
+          -H "X-NuGet-ApiKey: $OIDC_TOKEN" \
+          --data-binary @"$PACKAGE_FILE" \
+          "https://www.nuget.org/api/v2/package" || echo "Direct API call failed"
+        
+        echo ""
+        echo "=== Testing if this works with dotnet CLI ==="
+        # Set the token as environment variable that dotnet might pick up
+        export NUGET_AUTH_TOKEN="$OIDC_TOKEN"
         dotnet nuget push ./packages/*.nupkg \
           --source https://api.nuget.org/v3/index.json \
-          --no-service-endpoint \
-          --skip-duplicate || echo "No service endpoint failed"
-        echo ""
+          --api-key "$OIDC_TOKEN" \
+          --skip-duplicate
           
   create-release:
     name: Create GitHub Release
