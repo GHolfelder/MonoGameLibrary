@@ -157,13 +157,27 @@ jobs:
         
     - name: Publish to NuGet.org with Trusted Publishing
       run: |
-        # Verify .NET version and NuGet sources
-        dotnet --version
-        dotnet nuget list source
+        # Create a custom nuget.config that forces v3 API and proper authentication
+        cat > /tmp/nuget.config << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+          </packageSources>
+          <packageSourceCredentials>
+            <nuget.org>
+              <add key="Username" value="GitHub" />
+              <add key="ClearTextPassword" value="${{ secrets.GITHUB_TOKEN }}" />
+            </nuget.org>
+          </packageSourceCredentials>
+        </configuration>
+        EOF
         
-        # Push with trusted publishing (no API key needed)
+        # Use the custom config to ensure v3 API usage
         dotnet nuget push ./packages/*.nupkg \
-          --source https://api.nuget.org/v3/index.json \
+          --source "nuget.org" \
+          --configfile /tmp/nuget.config \
           --skip-duplicate
           
   create-release:
