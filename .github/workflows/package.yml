@@ -131,7 +131,8 @@ jobs:
     name: Publish to NuGet
     runs-on: ubuntu-latest
     needs: package
-    environment: production  # Required to match NuGet trusted publishing setup
+    environment:
+      name: production  # Required to match NuGet trusted publishing setup
     permissions:
       id-token: write  # Required for trusted publishing
       contents: read
@@ -150,21 +151,17 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '9.0.x'
-        
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v2
-      with:
-        nuget-version: 'latest'
+        source-url: https://api.nuget.org/v3/index.json
         
     - name: Publish to NuGet.org with Trusted Publishing
       run: |
-        # Clear any existing sources and add only v3 endpoint
-        dotnet nuget remove source nuget.org || true
-        dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org
+        # Verify .NET version and NuGet sources
+        dotnet --version
+        dotnet nuget list source
         
-        # Push with explicit source to force v3 API
+        # Push with trusted publishing (no API key needed)
         dotnet nuget push ./packages/*.nupkg \
-          --source nuget.org \
+          --source https://api.nuget.org/v3/index.json \
           --skip-duplicate
           
   create-release:
