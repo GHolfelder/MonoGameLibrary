@@ -163,10 +163,10 @@ jobs:
         ls -la ./packages/
         
         # Simple push without any authentication - pure trusted publishing
+        # Valid options for dotnet nuget push: --source, --skip-duplicate, --no-service-endpoint
         dotnet nuget push ./packages/*.nupkg \
           --source https://api.nuget.org/v3/index.json \
-          --skip-duplicate \
-          --verbosity detailed
+          --skip-duplicate
           
   create-release:
     name: Create GitHub Release
