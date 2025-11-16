@@ -148,37 +148,25 @@ jobs:
         path: ./packages
         
     - name: Setup .NET
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
-        source-url: https://api.nuget.org/v3/index.json
-      env:
-        NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Publish to NuGet.org with Trusted Publishing
+    - name: Manual NuGet Push Test
       run: |
-        # Create a custom nuget.config that forces v3 API and proper authentication
-        cat > /tmp/nuget.config << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <configuration>
-          <packageSources>
-            <clear />
-            <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
-          </packageSources>
-          <packageSourceCredentials>
-            <nuget.org>
-              <add key="Username" value="GitHub" />
-              <add key="ClearTextPassword" value="${{ secrets.GITHUB_TOKEN }}" />
-            </nuget.org>
-          </packageSourceCredentials>
-        </configuration>
-        EOF
+        echo "Testing pure trusted publishing approach..."
+        echo "Repository: ${{ github.repository }}" 
+        echo "Ref: ${{ github.ref }}"
+        echo "Actor: ${{ github.actor }}"
         
-        # Use the custom config to ensure v3 API usage
+        # List what we have
+        ls -la ./packages/
+        
+        # Simple push without any authentication - pure trusted publishing
         dotnet nuget push ./packages/*.nupkg \
-          --source "nuget.org" \
-          --configfile /tmp/nuget.config \
-          --skip-duplicate
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate \
+          --verbosity detailed
           
   create-release:
     name: Create GitHub Release
