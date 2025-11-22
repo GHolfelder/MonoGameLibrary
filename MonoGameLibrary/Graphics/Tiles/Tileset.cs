@@ -1,4 +1,4 @@
-namespace MonoGameLibrary.Graphics;
+namespace MonoGameLibrary.Graphics.Tiles;
 
 /// <summary>
 /// The Tileset class will manage a collection of tiles from a texture atlas.

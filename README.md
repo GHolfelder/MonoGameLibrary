@@ -32,7 +32,8 @@ Explore detailed documentation for each namespace:
 
 ### 🎨 [Graphics](MonoGameLibrary/Graphics/README.md)
 Comprehensive 2D graphics system with sprites, animations, texture atlases, and tile-based rendering.
-- **Classes**: TextureAtlas, Sprite, AnimatedSprite, CharacterSprite, PlayerSprite, NPCSprite, Tilemap, Tileset
+- **Classes**: TextureAtlas, Sprite, AnimatedSprite, CharacterSprite, PlayerSprite, NPCSprite
+- **Tiles Namespace**: Tilemap, Tileset
 - **Features**: XML/JSON configuration, animation state management, directional sprites, tile graphics
 
 ### 🎮 [Input](MonoGameLibrary/Input/README.md)

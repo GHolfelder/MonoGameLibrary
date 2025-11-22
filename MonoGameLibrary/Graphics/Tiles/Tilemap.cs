@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace MonoGameLibrary.Graphics;
+namespace MonoGameLibrary.Graphics.Tiles;
 
 /// <summary>
 /// The Tilemap class is used to arrange tiles from a tileset into a game level. 
