@@ -1,6 +1,6 @@
 # Graphics.Collision Namespace
 
-The `MonoGameLibrary.Graphics.Collision` namespace provides a comprehensive collision detection system for sprites with optional debug visualization.
+The `MonoGameLibrary.Graphics.Collision` namespace provides a comprehensive collision detection system for sprites with optional collision visualization.
 
 ## Core Classes
 
@@ -9,7 +9,7 @@ Base interface for all collision shapes, providing:
 - **Position offset** relative to parent sprite
 - **Intersection testing** with other shapes
 - **Bounding rectangle** calculation
-- **Debug drawing** capabilities
+- **Collision visualization** capabilities
 
 ### Collision Shapes
 
@@ -56,7 +56,7 @@ player.EnableCollision(32, 32);
 // Enable circular collision (radius 16 pixels)
 enemy.EnableCollision(16f);
 
-// Enable collision with debug visualization
+// Enable collision with visualization
 player.EnableCollision(32, 32, Vector2.Zero, enableDraw: true, Color.Green);
 ```
 
@@ -91,7 +91,7 @@ character.Collision = new SpriteCollision(
 );
 ```
 
-### Debug Visualization
+### Collision Visualization
 
 ```csharp
 public void Draw(SpriteBatch spriteBatch)
@@ -104,7 +104,7 @@ public void Draw(SpriteBatch spriteBatch)
 }
 ```
 
-### Manual Debug Drawing
+### Manual Collision Drawing
 
 ```csharp
 // Draw collision shapes manually
@@ -136,7 +136,7 @@ npc.EnableCollision(28, 48, Vector2.Zero, true, Color.Orange); // Visible orange
 ## Performance Considerations
 
 - **Collision shapes are optional** - no performance cost when `Collision` property is null
-- **Debug drawing** - only renders when `showCollision` parameter is true
+- **Collision drawing** - only renders when `showCollision` parameter is true
 - **Primitive drawing** - uses single pixel texture for efficient line/rectangle rendering
 - **Shape intersection** - optimized algorithms for rectangle-rectangle and circle-circle tests
 
@@ -168,4 +168,4 @@ public void CheckTilemapCollision(Sprite sprite, Vector2 position, List<Collisio
 - **Type-safe collision** - compile-time checking for shape combinations
 - **MonoGame integration** - uses standard MonoGame primitives and patterns
 
-The collision system provides production-ready collision detection with debug visualization while maintaining the clean architecture and performance characteristics of MonoGameLibrary.
+The collision system provides production-ready collision detection with visualization capabilities while maintaining the clean architecture and performance characteristics of MonoGameLibrary.
