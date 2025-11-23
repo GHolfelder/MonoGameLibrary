@@ -134,12 +134,13 @@ public class Tilemap
     }
 
     /// <summary>
-    /// Creates a tilemap from a JSON file with texture atlas integration.
+    /// Creates a new tilemap by loading and parsing a JSON file with a pre-loaded texture atlas.
     /// </summary>
-    /// <param name="content">The content manager to load assets.</param>
+    /// <param name="content">The content manager to use for loading resources.</param>
     /// <param name="jsonFilename">The JSON file path relative to the content directory.</param>
+    /// <param name="textureAtlas">The pre-loaded texture atlas containing tile sprites.</param>
     /// <returns>A new Tilemap instance loaded from JSON.</returns>
-    public static Tilemap FromJson(ContentManager content, string jsonFilename)
+    public static Tilemap FromJson(ContentManager content, string jsonFilename, TextureAtlas textureAtlas)
     {
         string jsonPath = Path.Combine(content.RootDirectory, jsonFilename);
         
@@ -159,13 +160,11 @@ public class Tilemap
                 int tileHeight = root.GetProperty("tileHeight").GetInt32();
                 string orientation = root.GetProperty("orientation").GetString();
                 
-                // Load the texture atlas (textures only, no animations needed for static tiles)
-                string atlasFile = root.GetProperty("atlasFile").GetString();
-                string atlasPath = Path.ChangeExtension(atlasFile, null); // Remove .png extension for content loading
-                TextureAtlas atlas = TextureAtlas.FromJsonTexture(content, atlasPath + ".json");
+                // Use the provided texture atlas instead of loading a new one
+                // This follows the singleton Core pattern for shared resource management
 
                 // Create the tilemap
-                Tilemap tilemap = new Tilemap(name, width, height, tileWidth, tileHeight, orientation, atlas);
+                Tilemap tilemap = new Tilemap(name, width, height, tileWidth, tileHeight, orientation, textureAtlas);
 
                 // Parse background color if present
                 if (root.TryGetProperty("backgroundColor", out JsonElement bgColorElement) && bgColorElement.ValueKind != JsonValueKind.Null)
