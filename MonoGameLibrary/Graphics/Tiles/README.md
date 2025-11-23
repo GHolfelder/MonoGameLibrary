@@ -81,9 +81,23 @@ Modern approach using texture atlases:
 
 ## Usage Examples
 
-### Basic Loading
+### Recommended: Shared Atlas Pattern
 ```csharp
-// Load tilemap from JSON with automatic atlas integration
+// Load texture atlas once in Scene or Core initialization
+TextureAtlas gameAtlas = TextureAtlas.FromJsonTexture(Content, "atlas.json");
+
+// Load multiple tilemaps using shared atlas
+Tilemap backgroundMap = Tilemap.FromJson(Content, "maps/background.json", gameAtlas);
+Tilemap foregroundMap = Tilemap.FromJson(Content, "maps/foreground.json", gameAtlas);
+
+// All tilemaps share one texture - optimal performance!
+backgroundMap.Draw(spriteBatch, Vector2.Zero);
+foregroundMap.Draw(spriteBatch, Vector2.Zero);
+```
+
+### Legacy: Automatic Loading (Deprecated)
+```csharp
+// Backward compatibility - automatically loads atlas per tilemap
 Tilemap tilemap = Tilemap.FromJson(Content, "maps/level1.json");
 
 // Draw all layers in order
@@ -173,10 +187,12 @@ This is essential for tilesets exported from tools like Tiled Map Editor or when
 
 This JSON-based tilemap system provides:
 
+- **Shared texture atlas**: Single atlas used across all graphics classes for optimal performance
+- **Singleton Core pattern**: Follows MonoGame Library's resource management philosophy  
 - **Static tile rendering**: Optimized for performance without animation processing overhead
-- **Texture atlas integration**: Uses TextureAtlas.FromJsonTexture() for sprite region lookup
 - **Professional z-ordering**: Layer-based depth rendering for character interaction
-- **Consistent patterns**: Follows library-wide static factory method pattern for content loading
+- **Memory efficiency**: Eliminates duplicate atlas loading across multiple tilemaps
+- **Consistent patterns**: Follows library-wide dependency injection pattern for shared resources
 - **Separation of concerns**: Static tiles handled separately from animated sprites
 - **Performance focused**: Minimal texture switching during rendering
 
