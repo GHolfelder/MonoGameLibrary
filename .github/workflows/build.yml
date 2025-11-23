@@ -53,7 +53,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('MonoGameLibrary/MonoGameLibrary.csproj') }}
+        key: ${{ runner.os }}-nuget-${{ github.run_number }}
         restore-keys: |
           ${{ runner.os }}-nuget-
           
