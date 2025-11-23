@@ -92,7 +92,7 @@ public class CollisionRectangle : ICollisionShape
     public void Draw(SpriteBatch spriteBatch, Vector2 worldPosition, Color color)
     {
         var bounds = GetBounds(worldPosition);
-        CollisionDebugDraw.DrawRectangle(spriteBatch, bounds, color);
+        CollisionDraw.DrawRectangle(spriteBatch, bounds, color);
     }
 
     /// <summary>

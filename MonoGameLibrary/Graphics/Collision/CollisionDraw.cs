@@ -5,9 +5,9 @@ using System;
 namespace MonoGameLibrary.Graphics.Collision;
 
 /// <summary>
-/// Static helper class for drawing primitive shapes for collision debugging.
+/// Static helper class for drawing primitive shapes for collision visualization.
 /// </summary>
-public static class CollisionDebugDraw
+public static class CollisionDraw
 {
     private static Texture2D s_pixelTexture;
 

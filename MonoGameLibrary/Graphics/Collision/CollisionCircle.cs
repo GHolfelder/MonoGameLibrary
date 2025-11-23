@@ -82,7 +82,7 @@ public class CollisionCircle : ICollisionShape
     public void Draw(SpriteBatch spriteBatch, Vector2 worldPosition, Color color)
     {
         var center = worldPosition + Offset;
-        CollisionDebugDraw.DrawCircle(spriteBatch, center, Radius, color);
+        CollisionDraw.DrawCircle(spriteBatch, center, Radius, color);
     }
 
     /// <summary>

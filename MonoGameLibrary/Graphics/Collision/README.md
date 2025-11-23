@@ -34,7 +34,7 @@ Collision component that can be attached to any sprite:
 - **DrawColor** - color for collision shapes
 - **Intersects()** method for collision testing
 
-### CollisionDebugDraw
+### CollisionDraw
 Static helper class for drawing primitive collision shapes:
 - **DrawRectangle()** - draws rectangle outlines
 - **DrawCircle()** - draws circle outlines  
@@ -109,10 +109,10 @@ public void Draw(SpriteBatch spriteBatch)
 ```csharp
 // Draw collision shapes manually
 var bounds = new Rectangle(100, 100, 64, 32);
-CollisionDebugDraw.DrawRectangle(spriteBatch, bounds, Color.Yellow);
+CollisionDraw.DrawRectangle(spriteBatch, bounds, Color.Yellow);
 
 var center = new Vector2(200, 150);
-CollisionDebugDraw.DrawCircle(spriteBatch, center, 25f, Color.Cyan);
+CollisionDraw.DrawCircle(spriteBatch, center, 25f, Color.Cyan);
 ```
 
 ## Integration with Existing Sprites

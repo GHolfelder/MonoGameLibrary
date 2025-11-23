@@ -117,8 +117,8 @@ public class Core : Game
         // Create the sprite batch instance.
         SpriteBatch = new SpriteBatch(GraphicsDevice);
 
-        // Initialize collision debug drawing system.
-        CollisionDebugDraw.Initialize(GraphicsDevice);
+        // Initialize collision drawing system.
+        CollisionDraw.Initialize(GraphicsDevice);
 
         // Create a new input manager.
         Input = new InputManager();
