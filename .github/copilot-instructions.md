@@ -11,7 +11,8 @@ This is a **MonoGame utility library** providing a higher-level API over MonoGam
 - Scene management with automatic disposal and GC collection during transitions
 
 ### Key Subsystems
-- **Graphics**: Texture atlases, sprites, animations, tilemaps with XML-driven configuration
+- **Graphics**: Texture atlases, sprites, animations with XML-driven configuration
+- **Graphics.Tiles**: Tilemaps and tilesets with XML-driven configuration
 - **Input**: Centralized input handling with previous/current state tracking for edge detection
 - **Audio**: Sound effect instance management with automatic cleanup
 - **Scenes**: Base scene class with per-scene content managers for automatic resource cleanup

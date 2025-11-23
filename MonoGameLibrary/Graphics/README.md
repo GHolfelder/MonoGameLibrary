@@ -19,8 +19,8 @@ The Graphics namespace provides comprehensive 2D graphics functionality for Mono
 - **[NPCSprite](NPCSprite.cs)** - AI-controlled character using `IAIBehavior` interface
 
 ### Tile-Based Graphics
-- **[Tilemap](Tilemap.cs)** - Arranges tiles from a tileset into game levels with XML configuration support
-- **[Tileset](Tileset.cs)** - Manages collections of tiles from texture atlases
+- **[Tilemap](Tiles/Tilemap.cs)** - Arranges tiles from a tileset into game levels with XML configuration support
+- **[Tileset](Tiles/Tileset.cs)** - Manages collections of tiles from texture atlases
 
 ### Animation System
 - **[AnimationState](AnimationState.cs)** - String constants for common animation states (idle, walk, run, attack, etc.)
@@ -81,6 +81,9 @@ var player = new PlayerSprite(
 
 ### Tilemap Creation
 ```csharp
+// Import the Tiles namespace
+using MonoGameLibrary.Graphics.Tiles;
+
 var tilemap = Tilemap.FromXml(content, "level1.xml");
 tilemap.Draw(spriteBatch);
 ```
