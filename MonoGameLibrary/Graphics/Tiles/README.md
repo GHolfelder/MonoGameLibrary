@@ -121,8 +121,8 @@ tilemap.DrawLayer(spriteBatch, backgroundLayer, position);
 ### Recommended Content Structure
 ```
 Content/
-├── atlas.json              # Texture atlas definitions
-├── atlas_animations.json   # Animation definitions  
+├── atlas.json             # Texture atlas definitions
+├── animations.json        # Animation definitions  
 ├── atlas.png              # Packed texture file
 └── maps/
     ├── level1.json        # Level 1 tilemap
