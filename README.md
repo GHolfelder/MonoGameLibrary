@@ -33,8 +33,8 @@ Explore detailed documentation for each namespace:
 ### 🎨 [Graphics](MonoGameLibrary/Graphics/README.md)
 Comprehensive 2D graphics system with sprites, animations, texture atlases, and tile-based rendering.
 - **Classes**: TextureAtlas, Sprite, AnimatedSprite, CharacterSprite, PlayerSprite, NPCSprite
-- **Tiles Namespace**: Tilemap, Tileset
-- **Features**: XML/JSON configuration, animation state management, directional sprites, tile graphics
+- **Tiles**: [Tilemap System](MonoGameLibrary/Graphics/Tiles/README.md) - JSON-based tilemaps with z-ordering support
+- **Features**: XML/JSON configuration, animation state management, directional sprites, professional tilemap rendering
 
 ### 🎮 [Input](MonoGameLibrary/Input/README.md)
 Unified input management with edge detection and multi-device support.
@@ -60,6 +60,30 @@ Flexible AI behavior system for implementing game artificial intelligence.
 Common utilities, logging system, and helper classes.
 - **Classes**: ILogger (ConsoleLogger, NullLogger), Direction enums
 - **Features**: Flexible logging, directional movement, type-safe enumerations
+
+## Featured Systems
+
+### 🗺️ JSON Tilemap System with Z-Ordering
+Professional tilemap rendering with proper depth management for characters and entities:
+
+```csharp
+// Load tilemap from JSON with texture atlas integration
+Tilemap tilemap = Tilemap.FromJson(Content, "maps/level1.json");
+
+// Render with proper z-ordering
+tilemap.DrawLayersUpTo(spriteBatch, position, 0);    // Background
+player.Draw(spriteBatch);                           // Characters  
+tilemap.DrawLayersFrom(spriteBatch, position, 1);   // Foreground
+```
+
+**Key Features:**
+- **Multi-layer support** for professional depth rendering
+- **Texture atlas integration** for optimal performance  
+- **Z-ordering system** - characters appear behind walls and trees
+- **JSON configuration** with tileset references to atlas sprites
+- **Per-scene tilemaps** for different game areas
+
+📖 **[Complete Tilemap Documentation](MonoGameLibrary/Graphics/Tiles/README.md)**
 
 ## Quick Start
 
@@ -134,6 +158,38 @@ if (Core.Input.GamePad.IsButtonDown(PlayerIndex.One, Buttons.A))
 // Music management
 Core.Audio.PlayMusic("background_music");
 Core.Audio.SetMusicVolume(0.7f);
+```
+
+### 4. Professional Tilemap with Z-Ordering
+```csharp
+public class GameLevel : Scene
+{
+    private Tilemap _tilemap;
+    private Player _player;
+
+    public override void LoadContent()
+    {
+        // Load JSON tilemap with texture atlas integration
+        _tilemap = Tilemap.FromJson(Content, "maps/forest.json");
+        _player = new Player(Content);
+    }
+
+    public override void Draw(GameTime gameTime)
+    {
+        Core.SpriteBatch.Begin();
+        
+        // Draw background layers (ground, floors)
+        _tilemap.DrawLayersUpTo(Core.SpriteBatch, Vector2.Zero, 0);
+        
+        // Draw characters and entities
+        _player.Draw(Core.SpriteBatch);
+        
+        // Draw foreground layers (walls, tree canopies)
+        _tilemap.DrawLayersFrom(Core.SpriteBatch, Vector2.Zero, 1);
+        
+        Core.SpriteBatch.End();
+    }
+}
 ```
 
 ## Installation
