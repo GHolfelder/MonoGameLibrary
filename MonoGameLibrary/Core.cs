@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Audio;
+using MonoGameLibrary.Graphics.Collision;
 using MonoGameLibrary.Input;
 using MonoGameLibrary.Scenes;
 
@@ -115,6 +116,9 @@ public class Core : Game
 
         // Create the sprite batch instance.
         SpriteBatch = new SpriteBatch(GraphicsDevice);
+
+        // Initialize collision debug drawing system.
+        CollisionDebugDraw.Initialize(GraphicsDevice);
 
         // Create a new input manager.
         Input = new InputManager();
