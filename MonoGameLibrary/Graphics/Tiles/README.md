@@ -81,7 +81,7 @@ Modern approach using texture atlases:
 
 ## Usage Examples
 
-### Recommended: Shared Atlas Pattern
+### Shared Atlas Pattern
 ```csharp
 // Load texture atlas once in Scene or Core initialization
 TextureAtlas gameAtlas = TextureAtlas.FromJsonTexture(Content, "atlas.json");
@@ -93,15 +93,6 @@ Tilemap foregroundMap = Tilemap.FromJson(Content, "maps/foreground.json", gameAt
 // All tilemaps share one texture - optimal performance!
 backgroundMap.Draw(spriteBatch, Vector2.Zero);
 foregroundMap.Draw(spriteBatch, Vector2.Zero);
-```
-
-### Legacy: Automatic Loading (Deprecated)
-```csharp
-// Backward compatibility - automatically loads atlas per tilemap
-Tilemap tilemap = Tilemap.FromJson(Content, "maps/level1.json");
-
-// Draw all layers in order
-tilemap.Draw(spriteBatch, Vector2.Zero);
 ```
 
 ### Z-Ordering for Character Depth
