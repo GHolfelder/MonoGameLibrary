@@ -159,10 +159,10 @@ public class Tilemap
                 int tileHeight = root.GetProperty("tileHeight").GetInt32();
                 string orientation = root.GetProperty("orientation").GetString();
                 
-                // Load the texture atlas
+                // Load the texture atlas (textures only, no animations needed for static tiles)
                 string atlasFile = root.GetProperty("atlasFile").GetString();
                 string atlasPath = Path.ChangeExtension(atlasFile, null); // Remove .png extension for content loading
-                TextureAtlas atlas = TextureAtlas.FromJson(content, atlasPath + ".json", atlasPath + "_animations.json");
+                TextureAtlas atlas = TextureAtlas.FromJsonTexture(content, atlasPath + ".json");
 
                 // Create the tilemap
                 Tilemap tilemap = new Tilemap(name, width, height, tileWidth, tileHeight, orientation, atlas);

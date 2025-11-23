@@ -66,7 +66,8 @@ Modern approach using texture atlases:
 #### Texture Atlas Integration
 - **Single texture**: All tiles from packed atlas for optimal performance
 - **Sprite references**: Tilesets reference named sprites via `atlasSprite`
-- **Automatic lookup**: Seamless integration with TextureAtlas system
+- **Static tile focus**: Optimized for static tile rendering without animation overhead
+- **Automatic lookup**: Seamless integration with TextureAtlas texture regions
 
 #### Multi-Layer Z-Ordering
 - **Layer-based rendering**: Multiple tile layers in proper depth order
@@ -121,8 +122,8 @@ tilemap.DrawLayer(spriteBatch, backgroundLayer, position);
 ### Recommended Content Structure
 ```
 Content/
-├── atlas.json              # Texture atlas definitions
-├── atlas_animations.json   # Animation definitions  
+├── atlas.json             # Texture atlas definitions
+├── animations.json        # Animation definitions  
 ├── atlas.png              # Packed texture file
 └── maps/
     ├── level1.json        # Level 1 tilemap
@@ -168,14 +169,15 @@ The `SpacedTileset` class automatically handles tilesets with spacing and margin
 
 This is essential for tilesets exported from tools like Tiled Map Editor or when using pre-made tileset graphics with built-in spacing.
 
-## Migration Notes
+## Architecture Notes
 
-This JSON-based system is designed to **replace** traditional XML-based tilemap workflows while providing:
+This JSON-based tilemap system provides:
 
-- Better performance through texture atlas integration
-- Professional z-ordering capabilities for character depth
-- More flexible layer management system
-- Easier integration with content pipelines
-- Support for complex game scenarios requiring proper depth rendering
+- **Static tile rendering**: Optimized for performance without animation processing overhead
+- **Texture atlas integration**: Uses TextureAtlas.FromJsonTexture() for sprite region lookup
+- **Professional z-ordering**: Layer-based depth rendering for character interaction
+- **Consistent patterns**: Follows library-wide static factory method pattern for content loading
+- **Separation of concerns**: Static tiles handled separately from animated sprites
+- **Performance focused**: Minimal texture switching during rendering
 
 The system is optimized for **production games** requiring professional tilemap rendering with entities that interact naturally with the environment through proper depth sorting.
