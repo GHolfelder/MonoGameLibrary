@@ -366,16 +366,16 @@ public class Tilemap
                     collisionObject.Type = objTypeElement.GetString();
                 
                 if (objElement.TryGetProperty("x", out JsonElement xElement))
-                    collisionObject.Position = new Vector2(xElement.GetSingle(), collisionObject.Position.Y);
+                    collisionObject.Position = new Vector2((float)Math.Truncate(xElement.GetSingle()), collisionObject.Position.Y);
                 
                 if (objElement.TryGetProperty("y", out JsonElement yElement))
-                    collisionObject.Position = new Vector2(collisionObject.Position.X, yElement.GetSingle());
+                    collisionObject.Position = new Vector2(collisionObject.Position.X, (float)Math.Truncate(yElement.GetSingle()));
                 
                 if (objElement.TryGetProperty("width", out JsonElement widthElement))
-                    collisionObject.Width = widthElement.GetInt32();
+                    collisionObject.Width = (int)Math.Truncate(widthElement.GetSingle());
                 
                 if (objElement.TryGetProperty("height", out JsonElement heightElement))
-                    collisionObject.Height = heightElement.GetInt32();
+                    collisionObject.Height = (int)Math.Truncate(heightElement.GetSingle());
                 
                 if (objElement.TryGetProperty("rotation", out JsonElement rotationElement))
                     collisionObject.Rotation = rotationElement.GetSingle();
