@@ -167,15 +167,14 @@ The tilemap system includes comprehensive object layer support for collision det
           "width": 64, "height": 32
         },
         {
-          "name": "trigger",
+          "name": "Ellipse",
           "x": 200, "y": 150,
-          "width": 32, "height": 32,
-          "ellipse": true
+          "width": 32, "height": 32
         },
         {
           "name": "spawn_point",
           "x": 300, "y": 200,
-          "point": true
+          "width": 0, "height": 0
         },
         {
           "name": "platform",
@@ -191,6 +190,17 @@ The tilemap system includes comprehensive object layer support for collision det
   ]
 }
 ```
+
+### Shape Detection Logic
+The parser automatically detects object shapes using these rules (in priority order):
+
+1. **Polygon objects**: Detected by presence of `polygon` array property
+2. **Polyline objects**: Detected by presence of `polyline` array property (treated as polygons)
+3. **Point objects**: Detected by `width: 0` and `height: 0`
+4. **Ellipse/Circle objects**: Detected by:
+   - Explicit `ellipse: true` property (Tiled Map Editor format), OR
+   - Object name containing "Ellipse" or "Circle" (case-insensitive)
+5. **Rectangle objects**: Default fallback for all other objects
 
 ### Collision Detection Usage
 ```csharp

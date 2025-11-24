@@ -376,24 +376,33 @@ public class Tilemap
                     collisionObject.Rotation = rotationElement.GetSingle();
                 
                 // Determine shape type based on object properties
-                if (objElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
-                {
-                    collisionObject.ShapeType = CollisionObjectType.Ellipse;
-                }
-                else if (objElement.TryGetProperty("point", out JsonElement pointElement) && pointElement.GetBoolean())
-                {
-                    collisionObject.ShapeType = CollisionObjectType.Point;
-                }
-                else if (objElement.TryGetProperty("polygon", out JsonElement polygonElement))
+                if (objElement.TryGetProperty("polygon", out JsonElement polygonElement) && polygonElement.ValueKind == JsonValueKind.Array)
                 {
                     collisionObject.ShapeType = CollisionObjectType.Polygon;
                     collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement);
                 }
-                else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement))
+                else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement) && polylineElement.ValueKind == JsonValueKind.Array)
                 {
                     // Treat polylines as polygons for collision purposes
                     collisionObject.ShapeType = CollisionObjectType.Polygon;
                     collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement);
+                }
+                else if (collisionObject.Width == 0 && collisionObject.Height == 0)
+                {
+                    // Point objects have zero width and height
+                    collisionObject.ShapeType = CollisionObjectType.Point;
+                }
+                else if (objElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
+                {
+                    // Explicit ellipse flag (Tiled Map Editor format)
+                    collisionObject.ShapeType = CollisionObjectType.Ellipse;
+                }
+                else if (collisionObject.Name != null && 
+                         (collisionObject.Name.Contains("Ellipse", StringComparison.OrdinalIgnoreCase) ||
+                          collisionObject.Name.Contains("Circle", StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Detect ellipse/circle by name when no explicit flag exists
+                    collisionObject.ShapeType = CollisionObjectType.Ellipse;
                 }
                 else
                 {
