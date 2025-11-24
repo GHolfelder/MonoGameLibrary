@@ -5,8 +5,17 @@
     },
     "activeFile": "",
     "expandedProjectPaths": [
+        "."
     ],
     "fileStates": {
+        "sample-map.tmx": {
+            "scale": 2,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 610.25,
+                "y": 500.5
+            }
+        },
         "sample-set.tsx": {
             "scaleInDock": 1.5,
             "scaleInEditor": 1
@@ -18,6 +27,7 @@
     ],
     "project": "sample.tiled-project",
     "recentFiles": [
+        "sample-map.tmx",
         "sample-set.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",

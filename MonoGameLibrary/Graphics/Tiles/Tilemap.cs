@@ -45,6 +45,55 @@ public class TilesetDefinition
 }
 
 /// <summary>
+/// Represents the type of shape for a collision object.
+/// </summary>
+public enum CollisionObjectType
+{
+    Rectangle,
+    Ellipse,
+    Point,
+    Polygon
+}
+
+/// <summary>
+/// Represents a collision object within an object layer.
+/// </summary>
+public class CollisionObject
+{
+    public string Name { get; set; }
+    public string Type { get; set; }
+    public Vector2 Position { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public CollisionObjectType ShapeType { get; set; } = CollisionObjectType.Rectangle;
+    public Vector2[] PolygonPoints { get; set; } = Array.Empty<Vector2>();
+    public float Rotation { get; set; } = 0f;
+    public Dictionary<string, object> Properties { get; set; } = new();
+    
+    /// <summary>
+    /// Gets the radius for circular/elliptical objects (uses Width as diameter).
+    /// </summary>
+    public float Radius => Width * 0.5f;
+    
+    /// <summary>
+    /// Gets whether this object is circular (ellipse with equal width and height).
+    /// </summary>
+    public bool IsCircle => ShapeType == CollisionObjectType.Ellipse && Width == Height;
+}
+
+/// <summary>
+/// Represents an object layer containing collision objects.
+/// </summary>
+public class ObjectLayer
+{
+    public string Name { get; set; }
+    public bool Visible { get; set; } = true;
+    public float Opacity { get; set; } = 1.0f;
+    public List<CollisionObject> Objects { get; set; } = new();
+    public Dictionary<string, object> Properties { get; set; } = new();
+}
+
+/// <summary>
 /// The enhanced Tilemap class with support for multiple layers and z-ordering.
 /// </summary>
 public class Tilemap
@@ -53,6 +102,7 @@ public class Tilemap
     private readonly List<TilesetDefinition> _tilesetDefinitions;
     private readonly Dictionary<int, ITileset> _tilesets;
     private readonly TextureAtlas _textureAtlas;
+    private readonly List<ObjectLayer> _objectLayers;
 
     /// <summary>
     /// Gets the map name.
@@ -95,6 +145,11 @@ public class Tilemap
     public IReadOnlyList<TileLayer> TileLayers => _tileLayers.AsReadOnly();
 
     /// <summary>
+    /// Gets the object layers containing collision objects and other map objects.
+    /// </summary>
+    public IReadOnlyList<ObjectLayer> ObjectLayers => _objectLayers.AsReadOnly();
+
+    /// <summary>
     /// Gets or sets the scale factor to draw tiles at.
     /// </summary>
     public Vector2 Scale { get; set; } = Vector2.One;
@@ -131,6 +186,7 @@ public class Tilemap
         _tileLayers = new List<TileLayer>();
         _tilesetDefinitions = new List<TilesetDefinition>();
         _tilesets = new Dictionary<int, ITileset>();
+        _objectLayers = new List<ObjectLayer>();
     }
 
     /// <summary>
@@ -191,6 +247,15 @@ public class Tilemap
                     foreach (JsonElement layerElement in layersElement.EnumerateArray())
                     {
                         tilemap.LoadTileLayerFromJson(layerElement);
+                    }
+                }
+
+                // Parse object layers
+                if (root.TryGetProperty("objectLayers", out JsonElement objectLayersElement))
+                {
+                    foreach (JsonElement objectLayerElement in objectLayersElement.EnumerateArray())
+                    {
+                        tilemap.LoadObjectLayerFromJson(objectLayerElement);
                     }
                 }
 
@@ -262,6 +327,122 @@ public class Tilemap
         }
 
         _tileLayers.Add(layer);
+    }
+
+    /// <summary>
+    /// Loads an object layer from JSON.
+    /// </summary>
+    private void LoadObjectLayerFromJson(JsonElement objectLayerElement)
+    {
+        var objectLayer = new ObjectLayer();
+        
+        // Load basic layer properties
+        if (objectLayerElement.TryGetProperty("name", out JsonElement nameElement))
+            objectLayer.Name = nameElement.GetString();
+        
+        if (objectLayerElement.TryGetProperty("visible", out JsonElement visibleElement))
+            objectLayer.Visible = visibleElement.GetBoolean();
+        
+        if (objectLayerElement.TryGetProperty("opacity", out JsonElement opacityElement))
+            objectLayer.Opacity = opacityElement.GetSingle();
+        
+        // Load objects array
+        if (objectLayerElement.TryGetProperty("objects", out JsonElement objectsElement))
+        {
+            foreach (JsonElement objElement in objectsElement.EnumerateArray())
+            {
+                var collisionObject = new CollisionObject();
+                
+                // Load basic object properties
+                if (objElement.TryGetProperty("name", out JsonElement objNameElement))
+                    collisionObject.Name = objNameElement.GetString();
+                
+                if (objElement.TryGetProperty("type", out JsonElement objTypeElement))
+                    collisionObject.Type = objTypeElement.GetString();
+                
+                if (objElement.TryGetProperty("x", out JsonElement xElement))
+                    collisionObject.Position = new Vector2(xElement.GetSingle(), collisionObject.Position.Y);
+                
+                if (objElement.TryGetProperty("y", out JsonElement yElement))
+                    collisionObject.Position = new Vector2(collisionObject.Position.X, yElement.GetSingle());
+                
+                if (objElement.TryGetProperty("width", out JsonElement widthElement))
+                    collisionObject.Width = widthElement.GetInt32();
+                
+                if (objElement.TryGetProperty("height", out JsonElement heightElement))
+                    collisionObject.Height = heightElement.GetInt32();
+                
+                if (objElement.TryGetProperty("rotation", out JsonElement rotationElement))
+                    collisionObject.Rotation = rotationElement.GetSingle();
+                
+                // Determine shape type based on object properties
+                if (objElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
+                {
+                    collisionObject.ShapeType = CollisionObjectType.Ellipse;
+                }
+                else if (objElement.TryGetProperty("point", out JsonElement pointElement) && pointElement.GetBoolean())
+                {
+                    collisionObject.ShapeType = CollisionObjectType.Point;
+                }
+                else if (objElement.TryGetProperty("polygon", out JsonElement polygonElement))
+                {
+                    collisionObject.ShapeType = CollisionObjectType.Polygon;
+                    collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement);
+                }
+                else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement))
+                {
+                    // Treat polylines as polygons for collision purposes
+                    collisionObject.ShapeType = CollisionObjectType.Polygon;
+                    collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement);
+                }
+                else
+                {
+                    // Default to rectangle
+                    collisionObject.ShapeType = CollisionObjectType.Rectangle;
+                }
+                
+                // Load custom properties if they exist
+                if (objElement.TryGetProperty("properties", out JsonElement propertiesElement))
+                {
+                    foreach (JsonProperty property in propertiesElement.EnumerateObject())
+                    {
+                        collisionObject.Properties[property.Name] = property.Value.ToString();
+                    }
+                }
+                
+                objectLayer.Objects.Add(collisionObject);
+            }
+        }
+        
+        // Load layer properties if they exist
+        if (objectLayerElement.TryGetProperty("properties", out JsonElement layerPropertiesElement))
+        {
+            foreach (JsonProperty property in layerPropertiesElement.EnumerateObject())
+            {
+                objectLayer.Properties[property.Name] = property.Value.ToString();
+            }
+        }
+        
+        _objectLayers.Add(objectLayer);
+    }
+
+    /// <summary>
+    /// Parses polygon points from JSON element.
+    /// </summary>
+    private static Vector2[] ParsePolygonPoints(JsonElement polygonElement)
+    {
+        var points = new List<Vector2>();
+        
+        foreach (JsonElement pointElement in polygonElement.EnumerateArray())
+        {
+            if (pointElement.TryGetProperty("x", out JsonElement xElement) &&
+                pointElement.TryGetProperty("y", out JsonElement yElement))
+            {
+                points.Add(new Vector2(xElement.GetSingle(), yElement.GetSingle()));
+            }
+        }
+        
+        return points.ToArray();
     }
 
     /// <summary>
@@ -389,6 +570,40 @@ public class Tilemap
     public TileLayer GetLayerByIndex(int index)
     {
         return index >= 0 && index < _tileLayers.Count ? _tileLayers[index] : null;
+    }
+
+    /// <summary>
+    /// Gets an object layer by name.
+    /// </summary>
+    /// <param name="name">The name of the object layer to find.</param>
+    /// <returns>The object layer with the specified name, or null if not found.</returns>
+    public ObjectLayer GetObjectLayer(string name)
+    {
+        return _objectLayers.FirstOrDefault(layer => layer.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Gets an object layer by index.
+    /// </summary>
+    /// <param name="index">The index of the object layer.</param>
+    /// <returns>The object layer at the specified index.</returns>
+    public ObjectLayer GetObjectLayerByIndex(int index)
+    {
+        return index >= 0 && index < _objectLayers.Count ? _objectLayers[index] : null;
+    }
+
+    /// <summary>
+    /// Gets collision objects from a specific object layer or all object layers.
+    /// </summary>
+    /// <param name="layerName">The name of the object layer, or null to get objects from all layers.</param>
+    /// <returns>List of collision objects from the specified layer(s).</returns>
+    public List<CollisionObject> GetCollisionObjects(string layerName = null)
+    {
+        if (string.IsNullOrEmpty(layerName))
+            return _objectLayers.SelectMany(layer => layer.Objects).ToList();
+        
+        var layer = GetObjectLayer(layerName);
+        return layer?.Objects ?? new List<CollisionObject>();
     }
 
     /// <summary>

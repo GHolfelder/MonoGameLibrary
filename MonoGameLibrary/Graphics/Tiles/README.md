@@ -143,6 +143,79 @@ The tilemap system integrates seamlessly with the existing TextureAtlas function
 2. **Sprite Lookup**: Uses `atlasSprite` names to find texture regions
 3. **Performance**: Single texture for entire tilemap reduces draw calls
 
+## Object Layer Collision System
+
+The tilemap system includes comprehensive object layer support for collision detection with multiple geometric shapes:
+
+### Supported Object Types
+- **Rectangle**: Standard collision boxes for walls and platforms
+- **Circle/Ellipse**: Curved collision areas for rounded objects  
+- **Polygon**: Complex shapes for irregular collision boundaries
+- **Point**: Precise trigger points for events or spawns
+
+### Object Layer JSON Format
+```json
+{
+  "objectLayers": [
+    {
+      "name": "Collision",
+      "visible": true,
+      "objects": [
+        {
+          "name": "wall",
+          "x": 100, "y": 100,
+          "width": 64, "height": 32
+        },
+        {
+          "name": "trigger",
+          "x": 200, "y": 150,
+          "width": 32, "height": 32,
+          "ellipse": true
+        },
+        {
+          "name": "spawn_point",
+          "x": 300, "y": 200,
+          "point": true
+        },
+        {
+          "name": "platform",
+          "x": 400, "y": 250,
+          "polygon": [
+            {"x": 0, "y": 0},
+            {"x": 64, "y": 0},
+            {"x": 32, "y": 32}
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Collision Detection Usage
+```csharp
+// Check sprite collision with object layer
+if (tilemap.CheckSpriteObjectCollision(player, playerPosition, "Collision"))
+{
+    // Handle collision with walls, triggers, etc.
+}
+
+// Character sprite collision (with movement handling)
+if (tilemap.CheckCharacterSpriteObjectCollision(character, characterPos, "Collision"))
+{
+    // Handle character movement blocking
+}
+
+// Visualize collision objects for debugging
+tilemap.DrawObjectLayerAsCollision(spriteBatch, "Collision", Color.Red, tilemapPosition);
+```
+
+### Shape-Specific Features
+- **Automatic shape detection** from JSON properties (`ellipse`, `point`, `polygon`)
+- **Appropriate collision algorithms** for each shape type
+- **Debug visualization** with shape-specific rendering
+- **Performance optimization** using bounding box calculations
+
 ## Advanced Features
 
 ### Layer Organization Strategy
