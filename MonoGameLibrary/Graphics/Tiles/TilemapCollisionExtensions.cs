@@ -271,13 +271,13 @@ public static class TilemapCollisionExtensions
                     break;
                     
                 case CollisionObjectType.Polygon:
-                    // Draw polygon edges
+                    // Draw polygon edges (closed shape)
                     DrawPolygonOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
                     break;
                     
                 case CollisionObjectType.Polyline:
-                    // Draw polyline edges
-                    DrawPolygonOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
+                    // Draw polyline edges (open path)
+                    DrawPolylineOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
                     break;
                     
                 case CollisionObjectType.Tile:
@@ -416,7 +416,7 @@ public static class TilemapCollisionExtensions
     }
 
     /// <summary>
-    /// Draws a polygon outline using line segments.
+    /// Draws a polygon outline using line segments (closed shape).
     /// </summary>
     private static void DrawPolygonOutline(SpriteBatch spriteBatch, Vector2[] points, Vector2 offset, Color color)
     {
@@ -425,28 +425,31 @@ public static class TilemapCollisionExtensions
         for (int i = 0; i < points.Length; i++)
         {
             Vector2 start = offset + points[i];
-            Vector2 end = offset + points[(i + 1) % points.Length];
-            
-            // Draw line using rectangles (simple line approximation)
-            Vector2 direction = end - start;
-            float distance = direction.Length();
-            if (distance > 0)
-            {
-                direction /= distance;
-                Vector2 perpendicular = new Vector2(-direction.Y, direction.X);
-                
-                // Create a thin rectangle representing the line
-                Rectangle lineRect = new Rectangle(
-                    (int)(start.X),
-                    (int)(start.Y),
-                    (int)distance,
-                    2
-                );
-                
-                // Note: This is a simple approximation. For better line drawing,
-                // you might want to implement proper line drawing with rotation
-                CollisionDraw.DrawRectangle(spriteBatch, lineRect, color);
-            }
+            Vector2 end = offset + points[(i + 1) % points.Length]; // Connect back to first point
+            DrawLine(spriteBatch, start, end, color);
         }
+    }
+    
+    /// <summary>
+    /// Draws a polyline outline using line segments (open path).
+    /// </summary>
+    private static void DrawPolylineOutline(SpriteBatch spriteBatch, Vector2[] points, Vector2 offset, Color color)
+    {
+        if (points.Length < 2) return;
+        
+        for (int i = 0; i < points.Length - 1; i++) // Don't connect last to first
+        {
+            Vector2 start = offset + points[i];
+            Vector2 end = offset + points[i + 1];
+            DrawLine(spriteBatch, start, end, color);
+        }
+    }
+    
+    /// <summary>
+    /// Draws a line between two points using CollisionDraw.
+    /// </summary>
+    private static void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color)
+    {
+        CollisionDraw.DrawLine(spriteBatch, start, end, color);
     }
 }
