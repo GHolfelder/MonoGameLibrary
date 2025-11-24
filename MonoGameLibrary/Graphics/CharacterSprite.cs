@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Utilities;
+using MonoGameLibrary.Graphics.Collision;
 
 namespace MonoGameLibrary.Graphics;
 
@@ -23,6 +24,8 @@ public class CharacterSprite
     protected string _currentState = string.Empty;
     protected Direction8 _currentDirection;
     protected AnimatedSprite _currentAnimation;
+    
+    private SpriteCollision _collision;
 
     // Debug property to force placeholder display
     public bool ForceShowPlaceholder { get; set; } = false;
@@ -88,6 +91,15 @@ public class CharacterSprite
     /// Default value is 0.0f
     /// </remarks>
     public float LayerDepth { get; set; } = 0.0f;
+    
+    /// <summary>
+    /// Gets or sets the collision component for this character sprite.
+    /// </summary>
+    public SpriteCollision Collision
+    {
+        get => _collision;
+        set => _collision = value;
+    }
 
     public string CurrentState => _currentState;
     public Direction8 CurrentDirection => _currentDirection;
@@ -352,5 +364,84 @@ public class CharacterSprite
             _placeholderSprite.Draw(spriteBatch, position);
         }
         // If no placeholder sprite is available, don't draw anything
+    }
+    
+    /// <summary>
+    /// Enables collision detection for this character sprite with a rectangular collision shape.
+    /// </summary>
+    /// <param name="width">The width of the collision rectangle.</param>
+    /// <param name="height">The height of the collision rectangle.</param>
+    /// <param name="offset">The offset of the collision rectangle relative to the sprite position.</param>
+    /// <param name="enableDraw">Whether to enable collision visualization.</param>
+    /// <param name="drawColor">The color to use for collision visualization.</param>
+    public void EnableCollision(int width, int height, Vector2 offset = default, bool enableDraw = false, Color drawColor = default)
+    {
+        var shape = new CollisionRectangle(width, height, offset);
+        Collision = new SpriteCollision(shape, enableDraw, drawColor == default ? Color.Red : drawColor);
+    }
+    
+    /// <summary>
+    /// Enables collision detection for this character sprite with a circular collision shape.
+    /// </summary>
+    /// <param name="radius">The radius of the collision circle.</param>
+    /// <param name="offset">The offset of the collision circle relative to the sprite position.</param>
+    /// <param name="enableDraw">Whether to enable collision visualization.</param>
+    /// <param name="drawColor">The color to use for collision visualization.</param>
+    public void EnableCollision(float radius, Vector2 offset = default, bool enableDraw = false, Color drawColor = default)
+    {
+        var shape = new CollisionCircle(radius, offset);
+        Collision = new SpriteCollision(shape, enableDraw, drawColor == default ? Color.Red : drawColor);
+    }
+    
+    /// <summary>
+    /// Checks if this character sprite collides with another character sprite.
+    /// </summary>
+    /// <param name="myPosition">This character's position.</param>
+    /// <param name="other">The other character sprite to check against.</param>
+    /// <param name="otherPosition">The other character's position.</param>
+    /// <returns>True if collision is detected, false otherwise.</returns>
+    public bool CheckCollision(Vector2 myPosition, CharacterSprite other, Vector2 otherPosition)
+    {
+        if (Collision == null || other.Collision == null) return false;
+        return Collision.Intersects(myPosition, other.Collision, otherPosition);
+    }
+    
+    /// <summary>
+    /// Draws the character sprite with optional collision visualization.
+    /// </summary>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position to draw at (null to use Position property).</param>
+    /// <param name="showCollision">Whether to show collision visualization.</param>
+    public virtual void Draw(SpriteBatch spriteBatch, Vector2? position, bool showCollision)
+    {
+        var drawPosition = position ?? Position;
+        
+        // Force placeholder for testing if enabled
+        if (ForceShowPlaceholder)
+        {
+            DrawPlaceholderSprite(spriteBatch, drawPosition);
+        }
+        else if (_currentAnimation != null)
+        {
+            // Apply all sprite properties to match Sprite class behavior
+            _currentAnimation.Color = Color;
+            _currentAnimation.Rotation = Rotation;
+            _currentAnimation.Scale = Scale;
+            _currentAnimation.Origin = Origin;
+            _currentAnimation.Effects = Effects;
+            _currentAnimation.LayerDepth = LayerDepth;
+            _currentAnimation.Draw(spriteBatch, drawPosition);
+        }
+        else
+        {
+            // Draw placeholder sprite when animation is missing
+            DrawPlaceholderSprite(spriteBatch, drawPosition);
+        }
+        
+        // Draw collision if requested and available
+        if (showCollision && Collision != null)
+        {
+            Collision.Draw(spriteBatch, drawPosition);
+        }
     }
 }

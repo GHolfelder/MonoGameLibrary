@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameLibrary.Graphics.Collision;
 
 namespace MonoGameLibrary.Graphics;
 
@@ -65,6 +66,12 @@ public class Sprite
     public float LayerDepth { get; set; } = 0.0f;
 
     /// <summary>
+    /// Gets or Sets the collision component for this sprite.
+    /// Set to null to disable collision detection.
+    /// </summary>
+    public SpriteCollision Collision { get; set; }
+
+    /// <summary>
     /// Gets the width, in pixels, of this sprite. 
     /// </summary>
     /// <remarks>
@@ -107,13 +114,63 @@ public class Sprite
     }
 
     /// <summary>
+    /// Enables collision detection for this sprite using a rectangular collision shape.
+    /// </summary>
+    /// <param name="width">The width of the collision rectangle.</param>
+    /// <param name="height">The height of the collision rectangle.</param>
+    /// <param name="offset">Optional offset from the sprite's position (default: Vector2.Zero).</param>
+    /// <param name="enableDraw">Whether to draw the collision shape for debugging (default: false).</param>
+    /// <param name="drawColor">The color to use when drawing the collision shape (default: Color.Red).</param>
+    public void EnableCollision(int width, int height, Vector2 offset = default, bool enableDraw = false, Color drawColor = default)
+    {
+        var color = drawColor == default ? Color.Red : drawColor;
+        var shape = new CollisionRectangle(width, height, offset);
+        Collision = new SpriteCollision(shape, enableDraw, color);
+    }
+
+    /// <summary>
+    /// Enables collision detection for this sprite using a circular collision shape.
+    /// </summary>
+    /// <param name="radius">The radius of the collision circle.</param>
+    /// <param name="offset">Optional offset from the sprite's position (default: Vector2.Zero).</param>
+    /// <param name="enableDraw">Whether to draw the collision shape for debugging (default: false).</param>
+    /// <param name="drawColor">The color to use when drawing the collision shape (default: Color.Red).</param>
+    public void EnableCollision(float radius, Vector2 offset = default, bool enableDraw = false, Color drawColor = default)
+    {
+        var color = drawColor == default ? Color.Red : drawColor;
+        var shape = new CollisionCircle(radius, offset);
+        Collision = new SpriteCollision(shape, enableDraw, color);
+    }
+
+    /// <summary>
+    /// Checks if this sprite's collision shape intersects with another sprite's collision shape.
+    /// </summary>
+    /// <param name="position">The position of this sprite.</param>
+    /// <param name="other">The other sprite to check collision with.</param>
+    /// <param name="otherPosition">The position of the other sprite.</param>
+    /// <returns>True if the sprites collide, false otherwise or if either sprite has no collision component.</returns>
+    public bool CheckCollision(Vector2 position, Sprite other, Vector2 otherPosition)
+    {
+        if (Collision == null || other.Collision == null)
+            return false;
+
+        return Collision.Intersects(position, other.Collision, otherPosition);
+    }
+
+    /// <summary>
     /// Submit this sprite for drawing to the current batch.
     /// </summary>
     /// <param name="spriteBatch">The SpriteBatch instance used for batching draw calls.</param>
     /// <param name="position">The xy-coordinate position to render this sprite at.</param>
-    public void Draw(SpriteBatch spriteBatch, Vector2 position)
+    /// <param name="showCollision">Whether to draw the collision shape for debugging (default: false).</param>
+    public void Draw(SpriteBatch spriteBatch, Vector2 position, bool showCollision = false)
     {
         Region.Draw(spriteBatch, position, Color, Rotation, Origin, Scale, Effects, LayerDepth);
+        
+        if (showCollision && Collision != null)
+        {
+            Collision.Draw(spriteBatch, position);
+        }
     }
 
 }
