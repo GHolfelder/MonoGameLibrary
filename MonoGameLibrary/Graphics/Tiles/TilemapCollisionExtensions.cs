@@ -140,6 +140,37 @@ public static class TilemapCollisionExtensions
     }
 
     /// <summary>
+    /// Checks if a character sprite collides with tiles in a collision layer.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check collision against.</param>
+    /// <param name="characterSprite">The character sprite to check collision for.</param>
+    /// <param name="spritePosition">The character sprite's world position.</param>
+    /// <param name="collisionLayerName">The name of the collision layer to check against.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>True if the character sprite collides with any tile in the layer.</returns>
+    public static bool CheckCharacterSpriteCollision(this Tilemap tilemap, CharacterSprite characterSprite, 
+        Vector2 spritePosition, string collisionLayerName, Vector2 tilemapPosition = default)
+    {
+        if (characterSprite.Collision == null) return false;
+        
+        var collisionRects = tilemap.GetCollisionRectangles(collisionLayerName, tilemapPosition);
+        
+        foreach (var tileRect in collisionRects)
+        {
+            // Create temporary collision for the tile
+            var tileCollisionShape = new CollisionRectangle(tileRect.Width, tileRect.Height, Vector2.Zero);
+            var tileCollision = new SpriteCollision(tileCollisionShape);
+            
+            if (characterSprite.Collision.Intersects(spritePosition, tileCollision, new Vector2(tileRect.X, tileRect.Y)))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /// <summary>
     /// Gets the tile coordinates for a world position within the tilemap.
     /// </summary>
     /// <param name="tilemap">The tilemap to query.</param>
