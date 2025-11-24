@@ -274,6 +274,33 @@ public static class TilemapCollisionExtensions
                     // Draw polygon edges
                     DrawPolygonOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
                     break;
+                    
+                case CollisionObjectType.Polyline:
+                    // Draw polyline edges
+                    DrawPolygonOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
+                    break;
+                    
+                case CollisionObjectType.Tile:
+                    // Draw tile as rectangle
+                    var tileRect = new Rectangle(
+                        (int)objectPosition.X,
+                        (int)objectPosition.Y,
+                        collisionObject.Width,
+                        collisionObject.Height
+                    );
+                    CollisionDraw.DrawRectangle(spriteBatch, tileRect, collisionColor);
+                    break;
+                    
+                case CollisionObjectType.Text:
+                    // Draw text bounds as rectangle
+                    var textRect = new Rectangle(
+                        (int)objectPosition.X,
+                        (int)objectPosition.Y,
+                        collisionObject.Width,
+                        collisionObject.Height
+                    );
+                    CollisionDraw.DrawRectangle(spriteBatch, textRect, collisionColor);
+                    break;
             }
         }
     }
@@ -324,6 +351,9 @@ public static class TilemapCollisionExtensions
                 CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
                 CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
                 CollisionObjectType.Polygon => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polygon
+                CollisionObjectType.Polyline => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polyline
+                CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
+                CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
                 _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
             };
 
@@ -368,6 +398,9 @@ public static class TilemapCollisionExtensions
                 CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
                 CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
                 CollisionObjectType.Polygon => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polygon
+                CollisionObjectType.Polyline => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polyline
+                CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
+                CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
                 _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
             };
 

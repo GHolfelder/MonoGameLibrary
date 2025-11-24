@@ -163,27 +163,57 @@ The tilemap system includes comprehensive object layer support for collision det
       "objects": [
         {
           "name": "wall",
+          "objectType": "rectangle",
           "x": 100, "y": 100,
           "width": 64, "height": 32
         },
         {
-          "name": "Ellipse",
+          "name": "trigger",
+          "objectType": "ellipse",
           "x": 200, "y": 150,
           "width": 32, "height": 32
         },
         {
           "name": "spawn_point",
+          "objectType": "point",
           "x": 300, "y": 200,
           "width": 0, "height": 0
         },
         {
           "name": "platform",
+          "objectType": "polygon",
           "x": 400, "y": 250,
           "polygon": [
             {"x": 0, "y": 0},
             {"x": 64, "y": 0},
             {"x": 32, "y": 32}
           ]
+        },
+        {
+          "name": "path",
+          "objectType": "polyline",
+          "x": 500, "y": 300,
+          "polyline": [
+            {"x": 0, "y": 0},
+            {"x": 32, "y": 16},
+            {"x": 64, "y": 32}
+          ]
+        },
+        {
+          "name": "tile_object",
+          "objectType": "tile",
+          "x": 600, "y": 350,
+          "width": 32, "height": 32,
+          "gid": 5
+        },
+        {
+          "name": "sign_text",
+          "objectType": "text",
+          "x": 700, "y": 400,
+          "width": 80, "height": 20,
+          "text": {
+            "content": "Welcome to the game!"
+          }
         }
       ]
     }
@@ -192,15 +222,32 @@ The tilemap system includes comprehensive object layer support for collision det
 ```
 
 ### Shape Detection Logic
-The parser automatically detects object shapes using these rules (in priority order):
+The parser uses this **priority order** for object type detection:
 
-1. **Polygon objects**: Detected by presence of `polygon` array property
-2. **Polyline objects**: Detected by presence of `polyline` array property (treated as polygons)
-3. **Point objects**: Detected by `width: 0` and `height: 0`
-4. **Ellipse/Circle objects**: Detected by:
-   - Explicit `ellipse: true` property (Tiled Map Editor format), OR
-   - Object name containing "Ellipse" or "Circle" (case-insensitive)
-5. **Rectangle objects**: Default fallback for all other objects
+1. **objectType property** (preferred): Explicit string values:
+   - `"rectangle"` → `CollisionObjectType.Rectangle`
+   - `"ellipse"` → `CollisionObjectType.Ellipse` 
+   - `"point"` → `CollisionObjectType.Point`
+   - `"polygon"` → `CollisionObjectType.Polygon`
+   - `"polyline"` → `CollisionObjectType.Polyline`
+   - `"tile"` → `CollisionObjectType.Tile`
+   - `"text"` → `CollisionObjectType.Text`
+
+2. **Legacy detection** (fallback when no `objectType` property):
+   - Polygon objects: Detected by presence of `polygon` array property
+   - Polyline objects: Detected by presence of `polyline` array property  
+   - Point objects: Detected by `width: 0` and `height: 0`
+   - Ellipse/Circle objects: Detected by `ellipse: true` or name containing "Ellipse"/"Circle"
+   - Rectangle objects: Default fallback
+
+### Supported Object Types
+- **Rectangle**: Standard collision boxes for walls and platforms
+- **Ellipse/Circle**: Curved collision areas for rounded objects
+- **Point**: Precise trigger points for events or spawns  
+- **Polygon**: Complex shapes for irregular collision boundaries
+- **Polyline**: Path-based objects for routes and boundaries
+- **Tile**: Tile-based objects with GID references
+- **Text**: Text objects with collision bounds and content parsing
 
 ### Collision Detection Usage
 ```csharp

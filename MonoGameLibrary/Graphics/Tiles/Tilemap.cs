@@ -52,7 +52,10 @@ public enum CollisionObjectType
     Rectangle,
     Ellipse,
     Point,
-    Polygon
+    Polygon,
+    Polyline,
+    Tile,
+    Text
 }
 
 /// <summary>
@@ -69,6 +72,8 @@ public class CollisionObject
     public Vector2[] PolygonPoints { get; set; } = Array.Empty<Vector2>();
     public float Rotation { get; set; } = 0f;
     public Dictionary<string, object> Properties { get; set; } = new();
+    public string TextContent { get; set; } = string.Empty;
+    public int Gid { get; set; } = 0; // Tile GID for tile objects
     
     /// <summary>
     /// Gets the radius for circular/elliptical objects (uses Width as diameter).
@@ -375,39 +380,73 @@ public class Tilemap
                 if (objElement.TryGetProperty("rotation", out JsonElement rotationElement))
                     collisionObject.Rotation = rotationElement.GetSingle();
                 
-                // Determine shape type based on object properties
-                if (objElement.TryGetProperty("polygon", out JsonElement polygonElement) && polygonElement.ValueKind == JsonValueKind.Array)
+                if (objElement.TryGetProperty("gid", out JsonElement gidElement))
+                    collisionObject.Gid = gidElement.GetInt32();
+                
+                // Determine shape type based on objectType property first, then fallback to legacy detection
+                if (objElement.TryGetProperty("objectType", out JsonElement objectTypeElement))
                 {
-                    collisionObject.ShapeType = CollisionObjectType.Polygon;
-                    collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement);
-                }
-                else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement) && polylineElement.ValueKind == JsonValueKind.Array)
-                {
-                    // Treat polylines as polygons for collision purposes
-                    collisionObject.ShapeType = CollisionObjectType.Polygon;
-                    collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement);
-                }
-                else if (collisionObject.Width == 0 && collisionObject.Height == 0)
-                {
-                    // Point objects have zero width and height
-                    collisionObject.ShapeType = CollisionObjectType.Point;
-                }
-                else if (objElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
-                {
-                    // Explicit ellipse flag (Tiled Map Editor format)
-                    collisionObject.ShapeType = CollisionObjectType.Ellipse;
-                }
-                else if (collisionObject.Name != null && 
-                         (collisionObject.Name.Contains("Ellipse", StringComparison.OrdinalIgnoreCase) ||
-                          collisionObject.Name.Contains("Circle", StringComparison.OrdinalIgnoreCase)))
-                {
-                    // Detect ellipse/circle by name when no explicit flag exists
-                    collisionObject.ShapeType = CollisionObjectType.Ellipse;
+                    string objectType = objectTypeElement.GetString()?.ToLowerInvariant();
+                    collisionObject.ShapeType = objectType switch
+                    {
+                        "rectangle" => CollisionObjectType.Rectangle,
+                        "ellipse" => CollisionObjectType.Ellipse,
+                        "point" => CollisionObjectType.Point,
+                        "polygon" => CollisionObjectType.Polygon,
+                        "polyline" => CollisionObjectType.Polyline,
+                        "tile" => CollisionObjectType.Tile,
+                        "text" => CollisionObjectType.Text,
+                        _ => CollisionObjectType.Rectangle // Default fallback
+                    };
                 }
                 else
                 {
-                    // Default to rectangle
-                    collisionObject.ShapeType = CollisionObjectType.Rectangle;
+                    // Legacy shape detection for objects without objectType property
+                    if (objElement.TryGetProperty("polygon", out JsonElement polygonElement) && polygonElement.ValueKind == JsonValueKind.Array)
+                    {
+                        collisionObject.ShapeType = CollisionObjectType.Polygon;
+                    }
+                    else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement) && polylineElement.ValueKind == JsonValueKind.Array)
+                    {
+                        collisionObject.ShapeType = CollisionObjectType.Polyline;
+                    }
+                    else if (collisionObject.Width == 0 && collisionObject.Height == 0)
+                    {
+                        collisionObject.ShapeType = CollisionObjectType.Point;
+                    }
+                    else if (objElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
+                    {
+                        collisionObject.ShapeType = CollisionObjectType.Ellipse;
+                    }
+                    else if (collisionObject.Name != null && 
+                             (collisionObject.Name.Contains("Ellipse", StringComparison.OrdinalIgnoreCase) ||
+                              collisionObject.Name.Contains("Circle", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        collisionObject.ShapeType = CollisionObjectType.Ellipse;
+                    }
+                    else
+                    {
+                        collisionObject.ShapeType = CollisionObjectType.Rectangle;
+                    }
+                }
+                
+                // Parse polygon/polyline points regardless of how shape type was determined
+                if (objElement.TryGetProperty("polygon", out JsonElement polygonElement2) && polygonElement2.ValueKind == JsonValueKind.Array)
+                {
+                    collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement2);
+                }
+                else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement2) && polylineElement2.ValueKind == JsonValueKind.Array)
+                {
+                    collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement2);
+                }
+                
+                // Parse text content for text objects
+                if (objElement.TryGetProperty("text", out JsonElement textElement) && textElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (textElement.TryGetProperty("content", out JsonElement contentElement))
+                    {
+                        collisionObject.TextContent = contentElement.GetString() ?? string.Empty;
+                    }
                 }
                 
                 // Load custom properties if they exist
