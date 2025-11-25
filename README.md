@@ -291,13 +291,18 @@ Add the MonoGame Library project to your solution and reference it from your gam
 Track the evolution of MonoGame Library through our detailed release notes:
 
 ### Current Version
-- **[Version 1.0.19](releases/ReleaseNotes-1.0.19.md)** *(Latest)* - Developer Mode & Enhanced Object Layer Support
+- **[Version 1.0.20](releases/ReleaseNotes-1.0.20.md)** *(Latest)* - Content Scaling System & Steam Deck Support
+  - Comprehensive virtual resolution system with automatic scaling and letterboxing
+  - Steam Deck auto-detection with native resolution and fullscreen optimization
+  - Monitor resolution awareness with intelligent window sizing
+  - Enhanced input system with virtual coordinate transformation
+
+### Previous Releases
+- **[Version 1.0.19](releases/ReleaseNotes-1.0.19.md)** - Developer Mode & Enhanced Object Layer Support
   - F1/F2 hotkey developer mode with collision visualization  
   - Enhanced object layer support with objectType property
   - Advanced polyline collision detection with geometric precision
   - PlayerSprite object layer integration
-
-### Previous Releases
 - **Version 1.0.18** - Enhanced Tilemap System & Multi-Shape Collision Support
 - **Version 1.0.17** - Improved Graphics Pipeline & Animation System  
 - **Version 1.0.16** - Core Architecture Improvements
