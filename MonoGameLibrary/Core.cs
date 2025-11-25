@@ -60,6 +60,37 @@ public class Core : Game
     /// </summary>
     public static AudioController Audio { get; private set; }
 
+    /// <summary>
+    /// Gets the primary monitor's display mode information
+    /// </summary>
+    public static DisplayMode PrimaryDisplayMode => GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+
+    /// <summary>
+    /// Gets the primary monitor's width in pixels
+    /// </summary>
+    public static int MonitorWidth => PrimaryDisplayMode.Width;
+
+    /// <summary>
+    /// Gets the primary monitor's height in pixels
+    /// </summary>
+    public static int MonitorHeight => PrimaryDisplayMode.Height;
+
+    /// <summary>
+    /// Gets a recommended window size based on monitor resolution (typically 80% of monitor size)
+    /// </summary>
+    public static Point RecommendedWindowSize
+    {
+        get
+        {
+            int width = (int)(MonitorWidth * 0.8f);
+            int height = (int)(MonitorHeight * 0.8f);
+            // Ensure minimum usable size
+            width = Math.Max(800, width);
+            height = Math.Max(600, height);
+            return new Point(width, height);
+        }
+    }
+
     private static bool s_developerMode = false;
     private static bool s_showCollisionBoxes = false;
     
@@ -133,6 +164,50 @@ public class Core : Game
     /// <param name="fullScreen">Indicates if the game should start in fullscreen mode.</param>
     public Core(string title, int width, int height, bool fullScreen)
     {
+        Initialize(title, width, height, fullScreen);
+    }
+
+    /// <summary>
+    /// Creates a new Core instance with automatic window sizing based on monitor resolution.
+    /// </summary>
+    /// <param name="title">The title to display in the title bar of the game window.</param>
+    /// <param name="fullScreen">Indicates if the game should start in fullscreen mode.</param>
+    /// <param name="windowSizePercent">The percentage of monitor size to use (default: 0.8 for 80%).</param>
+    public Core(string title, bool fullScreen = false, float windowSizePercent = 0.8f)
+    {
+        var monitorSize = GetMonitorAwareSize(windowSizePercent);
+        Initialize(title, monitorSize.X, monitorSize.Y, fullScreen);
+    }
+
+    /// <summary>
+    /// Gets a window size appropriate for the current monitor
+    /// </summary>
+    /// <param name="sizePercent">Percentage of monitor size to use (0.1 to 1.0)</param>
+    /// <returns>Point containing width and height</returns>
+    public static Point GetMonitorAwareSize(float sizePercent = 0.8f)
+    {
+        // Clamp percentage to reasonable range
+        sizePercent = Math.Clamp(sizePercent, 0.1f, 1.0f);
+        
+        int width = (int)(MonitorWidth * sizePercent);
+        int height = (int)(MonitorHeight * sizePercent);
+        
+        // Ensure minimum usable size
+        width = Math.Max(800, width);
+        height = Math.Max(600, height);
+        
+        // Ensure maximum size doesn't exceed monitor
+        width = Math.Min(width, MonitorWidth - 100); // Leave some margin
+        height = Math.Min(height, MonitorHeight - 100);
+        
+        return new Point(width, height);
+    }
+
+    /// <summary>
+    /// Common initialization logic for both constructors
+    /// </summary>
+    private void Initialize(string title, int width, int height, bool fullScreen)
+    {
         // Ensure that multiple cores are not created.
         if (s_instance != null)
         {
@@ -189,6 +264,50 @@ public class Core : Game
 
         // Create a new audio controller.
         Audio = new AudioController();
+    }
+
+    /// <summary>
+    /// Resizes the game window to the specified dimensions
+    /// </summary>
+    /// <param name="width">The new width in pixels</param>
+    /// <param name="height">The new height in pixels</param>
+    public static void ResizeWindow(int width, int height)
+    {
+        if (Graphics != null)
+        {
+            Graphics.PreferredBackBufferWidth = width;
+            Graphics.PreferredBackBufferHeight = height;
+            Graphics.ApplyChanges();
+        }
+    }
+
+    /// <summary>
+    /// Resizes the game window to a percentage of the monitor size
+    /// </summary>
+    /// <param name="sizePercent">Percentage of monitor size (0.1 to 1.0)</param>
+    public static void ResizeWindowToMonitorPercent(float sizePercent = 0.8f)
+    {
+        var size = GetMonitorAwareSize(sizePercent);
+        ResizeWindow(size.X, size.Y);
+    }
+
+    /// <summary>
+    /// Centers the game window on the screen (only works in windowed mode)
+    /// </summary>
+    public static void CenterWindow()
+    {
+        if (Graphics != null && !Graphics.IsFullScreen && s_instance?.Window != null)
+        {
+            var window = s_instance.Window;
+            var centerX = (MonitorWidth - Graphics.PreferredBackBufferWidth) / 2;
+            var centerY = (MonitorHeight - Graphics.PreferredBackBufferHeight) / 2;
+            
+            // Ensure window doesn't go off-screen
+            centerX = Math.Max(0, centerX);
+            centerY = Math.Max(0, centerY);
+            
+            window.Position = new Point(centerX, centerY);
+        }
     }
 
     protected override void UnloadContent()
