@@ -105,6 +105,63 @@ public class Core : Game
     }
 
     /// <summary>
+    /// Gets whether the current device is a Steam Deck
+    /// </summary>
+    public static bool IsSteamDeck
+    {
+        get
+        {
+            try
+            {
+                // Check multiple Steam Deck indicators
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    // Check for Steam Deck specific environment variables
+                    var steamDeckVar = Environment.GetEnvironmentVariable("SteamDeck");
+                    var steamAppId = Environment.GetEnvironmentVariable("SteamAppId");
+                    var steamGameId = Environment.GetEnvironmentVariable("SteamGameId");
+                    
+                    if (!string.IsNullOrEmpty(steamDeckVar) || 
+                        !string.IsNullOrEmpty(steamAppId) || 
+                        !string.IsNullOrEmpty(steamGameId))
+                    {
+                        return true;
+                    }
+                    
+                    // Check for Steam Deck hardware identifiers
+                    if (File.Exists("/sys/devices/virtual/dmi/id/product_name"))
+                    {
+                        var productName = File.ReadAllText("/sys/devices/virtual/dmi/id/product_name").Trim();
+                        if (productName.Contains("Jupiter", StringComparison.OrdinalIgnoreCase) ||
+                            productName.Contains("Steam Deck", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                    
+                    // Check for Steam Deck specific GPU
+                    if (File.Exists("/proc/cpuinfo"))
+                    {
+                        var cpuInfo = File.ReadAllText("/proc/cpuinfo");
+                        if (cpuInfo.Contains("AuthenticAMD", StringComparison.OrdinalIgnoreCase) &&
+                            cpuInfo.Contains("AMD Custom APU", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            catch
+            {
+                // If any file access fails, assume not Steam Deck
+                return false;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets the content manager used to load global assets.
     /// </summary>
     public static new ContentManager Content { get; private set; }
