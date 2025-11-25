@@ -76,13 +76,11 @@ public abstract class Scene : IDisposable
         // Developer mode hotkeys
         if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F1))
         {
-            System.Diagnostics.Debug.WriteLine("F1 key detected - toggling developer mode");
             Core.ToggleDeveloperMode();
         }
         
         if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F2))
         {
-            System.Diagnostics.Debug.WriteLine("F2 key detected - toggling collision boxes");
             Core.ToggleCollisionBoxes();
         }
 #endif
