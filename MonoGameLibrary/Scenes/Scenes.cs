@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MonoGameLibrary.Scenes;
 
@@ -69,13 +70,59 @@ public abstract class Scene : IDisposable
     /// Updates this scene.
     /// </summary>
     /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
-    public virtual void Update(GameTime gameTime) { }
+    public virtual void Update(GameTime gameTime)
+    {
+#if DEBUG
+        // Developer mode hotkeys
+        if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F1))
+        {
+            Core.ToggleDeveloperMode();
+        }
+        
+        if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F2))
+        {
+            Core.ToggleCollisionBoxes();
+        }
+#endif
+    }
 
     /// <summary>
     /// Draws this scene.
     /// </summary>
     /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
-    public virtual void Draw(GameTime gameTime) { }
+    public virtual void Draw(GameTime gameTime)
+    {
+        // Draw developer overlay automatically at the end of the frame
+        DrawDeveloperOverlay();
+    }
+    
+    /// <summary>
+    /// Draws developer mode overlay indicators
+    /// </summary>
+    protected virtual void DrawDeveloperOverlay()
+    {
+#if DEBUG
+        if (Core.DeveloperMode)
+        {
+            // Begin a separate SpriteBatch session for developer overlay
+            Core.SpriteBatch.Begin();
+            
+            // Draw small red circle at top center to indicate dev mode
+            var screenCenter = new Vector2(Core.Graphics.PreferredBackBufferWidth / 2f, 20);
+            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawCircle(Core.SpriteBatch, screenCenter, 8f, Color.Red);
+            
+            // Optional: Draw additional indicators for specific modes
+            if (Core.ShowCollisionBoxes)
+            {
+                var boxIndicator = new Vector2(screenCenter.X + 25, 20);
+                var rect = new Rectangle((int)boxIndicator.X - 6, (int)boxIndicator.Y - 6, 12, 12);
+                MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawRectangle(Core.SpriteBatch, rect, Color.Yellow);
+            }
+            
+            Core.SpriteBatch.End();
+        }
+#endif
+    }
 
     /// <summary>
     /// Disposes of this scene.

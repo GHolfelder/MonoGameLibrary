@@ -60,6 +60,59 @@ public class Core : Game
     /// </summary>
     public static AudioController Audio { get; private set; }
 
+#if DEBUG
+    private static bool s_developerMode = false;
+    private static bool s_showCollisionBoxes = false;
+    
+    /// <summary>
+    /// Gets or sets whether developer mode is active (Debug builds only)
+    /// </summary>
+    public static bool DeveloperMode
+    {
+        get => s_developerMode;
+        set => s_developerMode = value;
+    }
+    
+    /// <summary>
+    /// Gets or sets whether collision boxes should be visible (Debug builds only)
+    /// </summary>
+    public static bool ShowCollisionBoxes
+    {
+        get => s_showCollisionBoxes && s_developerMode;
+        set => s_showCollisionBoxes = value;
+    }
+    
+    /// <summary>
+    /// Toggles developer mode and all associated debug features
+    /// </summary>
+    public static void ToggleDeveloperMode()
+    {
+        s_developerMode = !s_developerMode;
+        if (!s_developerMode)
+        {
+            // Turn off all debug features when exiting dev mode
+            s_showCollisionBoxes = false;
+        }
+    }
+    
+    /// <summary>
+    /// Toggles collision box visibility (only works when developer mode is active)
+    /// </summary>
+    public static void ToggleCollisionBoxes()
+    {
+        if (s_developerMode)
+        {
+            s_showCollisionBoxes = !s_showCollisionBoxes;
+        }
+    }
+#else
+    // Release builds always return false
+    public static bool DeveloperMode => false;
+    public static bool ShowCollisionBoxes => false;
+    public static void ToggleDeveloperMode() { }
+    public static void ToggleCollisionBoxes() { }
+#endif
+
     /// <summary>
     /// Creates a new Core instance.
     /// </summary>
