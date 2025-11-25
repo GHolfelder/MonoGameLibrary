@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MonoGameLibrary.Scenes;
 
@@ -75,11 +76,13 @@ public abstract class Scene : IDisposable
         // Developer mode hotkeys
         if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F1))
         {
+            System.Diagnostics.Debug.WriteLine("F1 key detected - toggling developer mode");
             Core.ToggleDeveloperMode();
         }
         
         if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F2))
         {
+            System.Diagnostics.Debug.WriteLine("F2 key detected - toggling collision boxes");
             Core.ToggleCollisionBoxes();
         }
 #endif
@@ -91,27 +94,28 @@ public abstract class Scene : IDisposable
     /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
     public virtual void Draw(GameTime gameTime)
     {
-        DrawDeveloperOverlay();
+        // Base Scene class doesn't start SpriteBatch - derived classes should handle that
+        // The developer overlay will be drawn by derived classes after their content
     }
     
     /// <summary>
-    /// Draws developer mode overlay indicators
+    /// Draws developer mode overlay indicators (call this WITHIN an active SpriteBatch)
     /// </summary>
-    protected virtual void DrawDeveloperOverlay()
+    protected virtual void DrawDeveloperOverlay(SpriteBatch spriteBatch)
     {
 #if DEBUG
         if (Core.DeveloperMode)
         {
             // Draw small red circle at top center to indicate dev mode
             var screenCenter = new Vector2(Core.Graphics.PreferredBackBufferWidth / 2f, 20);
-            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawCircle(Core.SpriteBatch, screenCenter, 8f, Color.Red);
+            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawCircle(spriteBatch, screenCenter, 8f, Color.Red);
             
             // Optional: Draw additional indicators for specific modes
             if (Core.ShowCollisionBoxes)
             {
                 var boxIndicator = new Vector2(screenCenter.X + 25, 20);
                 var rect = new Rectangle((int)boxIndicator.X - 6, (int)boxIndicator.Y - 6, 12, 12);
-                MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawRectangle(Core.SpriteBatch, rect, Color.Yellow);
+                MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawRectangle(spriteBatch, rect, Color.Yellow);
             }
         }
 #endif

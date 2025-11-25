@@ -88,10 +88,12 @@ public class Core : Game
     public static void ToggleDeveloperMode()
     {
         s_developerMode = !s_developerMode;
+        System.Diagnostics.Debug.WriteLine($"Developer Mode: {s_developerMode}");
         if (!s_developerMode)
         {
             // Turn off all debug features when exiting dev mode
             s_showCollisionBoxes = false;
+            System.Diagnostics.Debug.WriteLine("Collision boxes disabled (dev mode off)");
         }
     }
     
@@ -103,6 +105,11 @@ public class Core : Game
         if (s_developerMode)
         {
             s_showCollisionBoxes = !s_showCollisionBoxes;
+            System.Diagnostics.Debug.WriteLine($"Show Collision Boxes: {s_showCollisionBoxes}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("Cannot toggle collision boxes - developer mode not active");
         }
     }
 #else
