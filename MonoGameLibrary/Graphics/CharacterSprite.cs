@@ -350,7 +350,8 @@ public class CharacterSprite
 #if DEBUG
             System.Diagnostics.Debug.WriteLine($"Drawing collision for CharacterSprite at {drawPosition}");
 #endif
-            Collision.Draw(spriteBatch, drawPosition);
+            // Call the collision shape directly to bypass EnableDraw check
+            Collision.Shape.Draw(spriteBatch, drawPosition, Collision.DrawColor);
         }
 #if DEBUG
         else if (Core.ShowCollisionBoxes && Collision == null)
@@ -384,7 +385,8 @@ public class CharacterSprite
 #if DEBUG
             System.Diagnostics.Debug.WriteLine($"Drawing placeholder collision for CharacterSprite at {position}");
 #endif
-            Collision.Draw(spriteBatch, position);
+            // Call the collision shape directly to bypass EnableDraw check
+            Collision.Shape.Draw(spriteBatch, position, Collision.DrawColor);
         }
 #if DEBUG
         else if (Core.ShowCollisionBoxes && Collision == null)
