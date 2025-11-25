@@ -25,6 +25,21 @@ public class MouseInfo
     }
 
     /// <summary>
+    /// Gets the current position of the mouse cursor in virtual coordinates (scaled content space).
+    /// </summary>
+    public Vector2 VirtualPosition => Core.ScreenToVirtual(Position.ToVector2());
+
+    /// <summary>
+    /// Gets the current x-coordinate position of the mouse cursor in virtual coordinates.
+    /// </summary>
+    public float VirtualX => VirtualPosition.X;
+
+    /// <summary>
+    /// Gets the current y-coordinate position of the mouse cursor in virtual coordinates.
+    /// </summary>
+    public float VirtualY => VirtualPosition.Y;
+
+    /// <summary>
     /// Gets or Sets the current x-coordinate position of the mouse cursor in screen space.
     /// </summary>
     public int X

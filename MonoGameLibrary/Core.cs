@@ -41,6 +41,68 @@ public class Core : Game
     public static SpriteBatch SpriteBatch { get; private set; }
 
     /// <summary>
+    /// Gets or sets the virtual resolution used for content scaling (design resolution)
+    /// </summary>
+    public static Point VirtualResolution { get; set; } = new Point(1920, 1080);
+
+    /// <summary>
+    /// Gets the current scaling factor based on window size vs virtual resolution
+    /// </summary>
+    public static Vector2 ContentScale
+    {
+        get
+        {
+            if (Graphics == null) return Vector2.One;
+            
+            float scaleX = (float)Graphics.PreferredBackBufferWidth / VirtualResolution.X;
+            float scaleY = (float)Graphics.PreferredBackBufferHeight / VirtualResolution.Y;
+            
+            // Use uniform scaling to maintain aspect ratio
+            float uniformScale = Math.Min(scaleX, scaleY);
+            return new Vector2(uniformScale);
+        }
+    }
+
+    /// <summary>
+    /// Gets the transformation matrix for content scaling
+    /// </summary>
+    public static Matrix ScaleMatrix
+    {
+        get
+        {
+            var scale = ContentScale;
+            
+            // Calculate centering offset for letterboxing/pillarboxing
+            float scaledWidth = VirtualResolution.X * scale.X;
+            float scaledHeight = VirtualResolution.Y * scale.Y;
+            
+            float offsetX = (Graphics.PreferredBackBufferWidth - scaledWidth) / 2f;
+            float offsetY = (Graphics.PreferredBackBufferHeight - scaledHeight) / 2f;
+            
+            return Matrix.CreateScale(scale.X, scale.Y, 1f) * 
+                   Matrix.CreateTranslation(offsetX, offsetY, 0f);
+        }
+    }
+
+    /// <summary>
+    /// Gets the viewport rectangle for the scaled content area
+    /// </summary>
+    public static Rectangle ScaledViewport
+    {
+        get
+        {
+            var scale = ContentScale;
+            float scaledWidth = VirtualResolution.X * scale.X;
+            float scaledHeight = VirtualResolution.Y * scale.Y;
+            
+            float offsetX = (Graphics.PreferredBackBufferWidth - scaledWidth) / 2f;
+            float offsetY = (Graphics.PreferredBackBufferHeight - scaledHeight) / 2f;
+            
+            return new Rectangle((int)offsetX, (int)offsetY, (int)scaledWidth, (int)scaledHeight);
+        }
+    }
+
+    /// <summary>
     /// Gets the content manager used to load global assets.
     /// </summary>
     public static new ContentManager Content { get; private set; }
@@ -153,6 +215,44 @@ public class Core : Game
         {
             s_showCollisionBoxes = !s_showCollisionBoxes;
         }
+    }
+
+    /// <summary>
+    /// Converts screen coordinates to virtual coordinates for content scaling
+    /// </summary>
+    /// <param name="screenPosition">Position in screen/window coordinates</param>
+    /// <returns>Position in virtual resolution coordinates</returns>
+    public static Vector2 ScreenToVirtual(Vector2 screenPosition)
+    {
+        var scale = ContentScale;
+        var viewport = ScaledViewport;
+        
+        // Adjust for viewport offset and scale
+        Vector2 adjustedPosition = screenPosition - new Vector2(viewport.X, viewport.Y);
+        return adjustedPosition / scale;
+    }
+
+    /// <summary>
+    /// Converts virtual coordinates to screen coordinates
+    /// </summary>
+    /// <param name="virtualPosition">Position in virtual resolution coordinates</param>
+    /// <returns>Position in screen/window coordinates</returns>
+    public static Vector2 VirtualToScreen(Vector2 virtualPosition)
+    {
+        var scale = ContentScale;
+        var viewport = ScaledViewport;
+        
+        return (virtualPosition * scale) + new Vector2(viewport.X, viewport.Y);
+    }
+
+    /// <summary>
+    /// Sets a custom virtual resolution for content scaling
+    /// </summary>
+    /// <param name="width">Virtual width (design width)</param>
+    /// <param name="height">Virtual height (design height)</param>
+    public static void SetVirtualResolution(int width, int height)
+    {
+        VirtualResolution = new Point(width, height);
     }
 
     /// <summary>

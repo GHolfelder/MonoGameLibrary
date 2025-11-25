@@ -121,6 +121,32 @@ public abstract class Scene : IDisposable
     }
 
     /// <summary>
+    /// Helper method to begin SpriteBatch with automatic content scaling
+    /// </summary>
+    /// <param name="sortMode">Sprite sorting mode</param>
+    /// <param name="blendState">Blend state</param>
+    /// <param name="samplerState">Sampler state</param>
+    /// <param name="depthStencilState">Depth stencil state</param>
+    /// <param name="rasterizerState">Rasterizer state</param>
+    /// <param name="useScaling">Whether to apply content scaling (default: true)</param>
+    protected void BeginScaled(SpriteSortMode sortMode = SpriteSortMode.Deferred,
+                              BlendState blendState = null,
+                              SamplerState samplerState = null, 
+                              DepthStencilState depthStencilState = null,
+                              RasterizerState rasterizerState = null,
+                              bool useScaling = true)
+    {
+        if (useScaling)
+        {
+            Core.SpriteBatch.Begin(sortMode, blendState, samplerState, depthStencilState, rasterizerState, null, Core.ScaleMatrix);
+        }
+        else
+        {
+            Core.SpriteBatch.Begin(sortMode, blendState, samplerState, depthStencilState, rasterizerState);
+        }
+    }
+
+    /// <summary>
     /// Disposes of this scene.
     /// </summary>
     public void Dispose()
