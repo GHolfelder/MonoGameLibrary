@@ -225,6 +225,9 @@ public static class TilemapCollisionExtensions
     public static void DrawObjectLayerAsCollision(this Tilemap tilemap, SpriteBatch spriteBatch,
         string objectLayerName, Vector2 position, Color collisionColor)
     {
+        // Only draw if global developer mode collision boxes are enabled
+        if (!Core.ShowCollisionBoxes) return;
+        
         var objectLayer = tilemap.GetObjectLayer(objectLayerName);
         if (objectLayer == null || !objectLayer.Visible) return;
 
