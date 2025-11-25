@@ -351,11 +351,21 @@ public static class TilemapCollisionExtensions
                 CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
                 CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
                 CollisionObjectType.Polygon => CreatePolygonCollisionShape(collisionObject),
-                CollisionObjectType.Polyline => CreatePolylineCollisionShape(collisionObject),
+                CollisionObjectType.Polyline => null, // Special handling below for line-based collision
                 CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
                 CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
                 _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
             };
+
+            // Special handling for polylines - check line intersection instead of bounding box
+            if (collisionObject.ShapeType == CollisionObjectType.Polyline)
+            {
+                if (CheckPolylineCollision(sprite, spritePosition, collisionObject, objectWorldPosition))
+                {
+                    return true;
+                }
+                continue; // Skip normal collision check for polylines
+            }
 
             var objectCollision = new SpriteCollision(objectCollisionShape);
 
@@ -398,11 +408,21 @@ public static class TilemapCollisionExtensions
                 CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
                 CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
                 CollisionObjectType.Polygon => CreatePolygonCollisionShape(collisionObject),
-                CollisionObjectType.Polyline => CreatePolylineCollisionShape(collisionObject),
+                CollisionObjectType.Polyline => null, // Special handling below for line-based collision
                 CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
                 CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
                 _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
             };
+
+            // Special handling for polylines - check line intersection instead of bounding box
+            if (collisionObject.ShapeType == CollisionObjectType.Polyline)
+            {
+                if (CheckPolylineCollision(characterSprite, spritePosition, collisionObject, objectWorldPosition))
+                {
+                    return true;
+                }
+                continue; // Skip normal collision check for polylines
+            }
 
             var objectCollision = new SpriteCollision(objectCollisionShape);
 
@@ -488,6 +508,119 @@ public static class TilemapCollisionExtensions
             (int)Math.Max(bounds.Height, lineThickness), 
             new Vector2(bounds.X - lineThickness/2, bounds.Y - lineThickness/2)
         );
+    }
+    
+    /// <summary>
+    /// Checks collision with a polyline by testing if the sprite intersects any line segment.
+    /// </summary>
+    private static bool CheckPolylineCollision(object sprite, Vector2 spritePosition, CollisionObject polylineObject, Vector2 polylineWorldPosition)
+    {
+        if (polylineObject.PolygonPoints == null || polylineObject.PolygonPoints.Length < 2)
+            return false;
+            
+        // Get sprite collision bounds
+        Rectangle spriteBounds;
+        if (sprite is Sprite regularSprite && regularSprite.Collision != null)
+        {
+            spriteBounds = regularSprite.Collision.GetBounds(spritePosition);
+        }
+        else if (sprite is CharacterSprite characterSprite && characterSprite.Collision != null)
+        {
+            spriteBounds = characterSprite.Collision.GetBounds(spritePosition);
+        }
+        else
+        {
+            return false; // No collision component
+        }
+        
+        // Check each line segment of the polyline
+        for (int i = 0; i < polylineObject.PolygonPoints.Length - 1; i++)
+        {
+            Vector2 lineStart = polylineWorldPosition + polylineObject.PolygonPoints[i];
+            Vector2 lineEnd = polylineWorldPosition + polylineObject.PolygonPoints[i + 1];
+            
+            if (LineIntersectsRectangle(lineStart, lineEnd, spriteBounds))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /// <summary>
+    /// Tests if a line segment intersects with a rectangle.
+    /// </summary>
+    private static bool LineIntersectsRectangle(Vector2 lineStart, Vector2 lineEnd, Rectangle rectangle)
+    {
+        // Convert rectangle to float coordinates
+        float rectLeft = rectangle.Left;
+        float rectRight = rectangle.Right;
+        float rectTop = rectangle.Top;
+        float rectBottom = rectangle.Bottom;
+        
+        // Check if either endpoint is inside the rectangle
+        if (IsPointInRectangle(lineStart, rectangle) || IsPointInRectangle(lineEnd, rectangle))
+            return true;
+        
+        // Check intersection with each edge of the rectangle
+        Vector2 topLeft = new Vector2(rectLeft, rectTop);
+        Vector2 topRight = new Vector2(rectRight, rectTop);
+        Vector2 bottomLeft = new Vector2(rectLeft, rectBottom);
+        Vector2 bottomRight = new Vector2(rectRight, rectBottom);
+        
+        return LineSegmentsIntersect(lineStart, lineEnd, topLeft, topRight) ||      // Top edge
+               LineSegmentsIntersect(lineStart, lineEnd, topRight, bottomRight) ||  // Right edge
+               LineSegmentsIntersect(lineStart, lineEnd, bottomRight, bottomLeft) || // Bottom edge
+               LineSegmentsIntersect(lineStart, lineEnd, bottomLeft, topLeft);       // Left edge
+    }
+    
+    /// <summary>
+    /// Tests if a point is inside a rectangle.
+    /// </summary>
+    private static bool IsPointInRectangle(Vector2 point, Rectangle rectangle)
+    {
+        return point.X >= rectangle.Left && point.X <= rectangle.Right &&
+               point.Y >= rectangle.Top && point.Y <= rectangle.Bottom;
+    }
+    
+    /// <summary>
+    /// Tests if two line segments intersect.
+    /// </summary>
+    private static bool LineSegmentsIntersect(Vector2 p1, Vector2 q1, Vector2 p2, Vector2 q2)
+    {
+        float d1 = CrossProduct(q2 - p2, p1 - p2);
+        float d2 = CrossProduct(q2 - p2, q1 - p2);
+        float d3 = CrossProduct(q1 - p1, p2 - p1);
+        float d4 = CrossProduct(q1 - p1, q2 - p1);
+        
+        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+            ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)))
+            return true;
+            
+        if (d1 == 0 && IsPointOnSegment(p2, p1, q1)) return true;
+        if (d2 == 0 && IsPointOnSegment(p2, q1, q2)) return true;
+        if (d3 == 0 && IsPointOnSegment(p1, p2, q2)) return true;
+        if (d4 == 0 && IsPointOnSegment(p1, q2, q1)) return true;
+        
+        return false;
+    }
+    
+    /// <summary>
+    /// Calculates the 2D cross product of two vectors.
+    /// </summary>
+    private static float CrossProduct(Vector2 a, Vector2 b)
+    {
+        return a.X * b.Y - a.Y * b.X;
+    }
+    
+    /// <summary>
+    /// Tests if point q lies on line segment pr.
+    /// </summary>
+    private static bool IsPointOnSegment(Vector2 p, Vector2 q, Vector2 r)
+    {
+        return q.X <= Math.Max(p.X, r.X) && q.X >= Math.Min(p.X, r.X) &&
+               q.Y <= Math.Max(p.Y, r.Y) && q.Y >= Math.Min(p.Y, r.Y);
     }
     
     /// <summary>
