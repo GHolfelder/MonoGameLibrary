@@ -550,29 +550,39 @@ public static class TilemapCollisionExtensions
     
     /// <summary>
     /// Tests if a line segment intersects with a rectangle.
+    /// Uses a more conservative approach to avoid false positives at endpoints.
     /// </summary>
     private static bool LineIntersectsRectangle(Vector2 lineStart, Vector2 lineEnd, Rectangle rectangle)
     {
-        // Convert rectangle to float coordinates
+        // Convert rectangle to float coordinates  
         float rectLeft = rectangle.Left;
         float rectRight = rectangle.Right;
         float rectTop = rectangle.Top;
         float rectBottom = rectangle.Bottom;
         
+        // Check if the line segment is completely outside the rectangle
+        if ((lineStart.X < rectLeft && lineEnd.X < rectLeft) ||
+            (lineStart.X > rectRight && lineEnd.X > rectRight) ||
+            (lineStart.Y < rectTop && lineEnd.Y < rectTop) ||
+            (lineStart.Y > rectBottom && lineEnd.Y > rectBottom))
+        {
+            return false; // Line is completely outside rectangle
+        }
+        
         // Check if either endpoint is inside the rectangle
         if (IsPointInRectangle(lineStart, rectangle) || IsPointInRectangle(lineEnd, rectangle))
             return true;
         
-        // Check intersection with each edge of the rectangle
+        // Check intersection with each edge of the rectangle using a stricter method
         Vector2 topLeft = new Vector2(rectLeft, rectTop);
         Vector2 topRight = new Vector2(rectRight, rectTop);
         Vector2 bottomLeft = new Vector2(rectLeft, rectBottom);
         Vector2 bottomRight = new Vector2(rectRight, rectBottom);
         
-        return LineSegmentsIntersect(lineStart, lineEnd, topLeft, topRight) ||      // Top edge
-               LineSegmentsIntersect(lineStart, lineEnd, topRight, bottomRight) ||  // Right edge
-               LineSegmentsIntersect(lineStart, lineEnd, bottomRight, bottomLeft) || // Bottom edge
-               LineSegmentsIntersect(lineStart, lineEnd, bottomLeft, topLeft);       // Left edge
+        return StrictLineSegmentsIntersect(lineStart, lineEnd, topLeft, topRight) ||      // Top edge
+               StrictLineSegmentsIntersect(lineStart, lineEnd, topRight, bottomRight) ||  // Right edge
+               StrictLineSegmentsIntersect(lineStart, lineEnd, bottomRight, bottomLeft) || // Bottom edge
+               StrictLineSegmentsIntersect(lineStart, lineEnd, bottomLeft, topLeft);       // Left edge
     }
     
     /// <summary>
@@ -585,6 +595,50 @@ public static class TilemapCollisionExtensions
     }
     
     /// <summary>
+    /// Tests if two line segments intersect using a stricter algorithm.
+    /// This version is more conservative about endpoint collisions.
+    /// </summary>
+    private static bool StrictLineSegmentsIntersect(Vector2 p1, Vector2 q1, Vector2 p2, Vector2 q2)
+    {
+        // Calculate the direction vectors
+        Vector2 d1 = q1 - p1; // Direction of first line segment
+        Vector2 d2 = q2 - p2; // Direction of second line segment
+        Vector2 dp = p1 - p2; // Vector between starting points
+        
+        float cross_d1_d2 = CrossProduct(d1, d2);
+        float cross_dp_d2 = CrossProduct(dp, d2);
+        float cross_dp_d1 = CrossProduct(dp, d1);
+        
+        // Check if lines are parallel (cross product of directions is near zero)
+        if (Math.Abs(cross_d1_d2) < 0.0001f)
+        {
+            // Lines are parallel - check if they're collinear and overlapping
+            if (Math.Abs(cross_dp_d2) < 0.0001f)
+            {
+                // Lines are collinear - check for overlap
+                float t0 = Vector2.Dot(dp, d1) / Vector2.Dot(d1, d1);
+                float t1 = t0 + Vector2.Dot(d2, d1) / Vector2.Dot(d1, d1);
+                
+                // Ensure t0 <= t1
+                if (t0 > t1) (t0, t1) = (t1, t0);
+                
+                // Check for overlap in the range [0,1]
+                return t1 >= 0 && t0 <= 1;
+            }
+            return false; // Parallel but not collinear
+        }
+        
+        // Calculate intersection parameters
+        float t = cross_dp_d2 / cross_d1_d2;
+        float u = cross_dp_d1 / cross_d1_d2;
+        
+        // Check if intersection occurs within both line segments
+        // Use slightly stricter bounds to avoid edge cases
+        const float epsilon = 0.0001f;
+        return t >= epsilon && t <= (1.0f - epsilon) && u >= epsilon && u <= (1.0f - epsilon);
+    }
+    
+    /// <summary>
     /// Tests if two line segments intersect.
     /// </summary>
     private static bool LineSegmentsIntersect(Vector2 p1, Vector2 q1, Vector2 p2, Vector2 q2)
@@ -594,14 +648,16 @@ public static class TilemapCollisionExtensions
         float d3 = CrossProduct(q1 - p1, p2 - p1);
         float d4 = CrossProduct(q1 - p1, q2 - p1);
         
+        // Check if lines intersect (general case)
         if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
             ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)))
             return true;
-            
-        if (d1 == 0 && IsPointOnSegment(p2, p1, q1)) return true;
-        if (d2 == 0 && IsPointOnSegment(p2, q1, q2)) return true;
-        if (d3 == 0 && IsPointOnSegment(p1, p2, q2)) return true;
-        if (d4 == 0 && IsPointOnSegment(p1, q2, q1)) return true;
+        
+        // Check collinear cases - only if points are actually collinear
+        if (Math.Abs(d1) < 0.0001f && IsPointOnSegment(p1, p2, q1)) return true;
+        if (Math.Abs(d2) < 0.0001f && IsPointOnSegment(p1, q2, q1)) return true; 
+        if (Math.Abs(d3) < 0.0001f && IsPointOnSegment(p2, p1, q2)) return true;
+        if (Math.Abs(d4) < 0.0001f && IsPointOnSegment(p2, q1, q2)) return true;
         
         return false;
     }
@@ -615,7 +671,7 @@ public static class TilemapCollisionExtensions
     }
     
     /// <summary>
-    /// Tests if point q lies on line segment pr.
+    /// Tests if point q lies on line segment pr (assuming they are collinear).
     /// </summary>
     private static bool IsPointOnSegment(Vector2 p, Vector2 q, Vector2 r)
     {
