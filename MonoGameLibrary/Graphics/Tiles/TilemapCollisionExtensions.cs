@@ -350,8 +350,8 @@ public static class TilemapCollisionExtensions
                 CollisionObjectType.Ellipse when collisionObject.IsCircle => new CollisionCircle(collisionObject.Radius, Vector2.Zero),
                 CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
                 CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
-                CollisionObjectType.Polygon => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polygon
-                CollisionObjectType.Polyline => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polyline
+                CollisionObjectType.Polygon => CreatePolygonCollisionShape(collisionObject),
+                CollisionObjectType.Polyline => CreatePolylineCollisionShape(collisionObject),
                 CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
                 CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
                 _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
@@ -397,8 +397,8 @@ public static class TilemapCollisionExtensions
                 CollisionObjectType.Ellipse when collisionObject.IsCircle => new CollisionCircle(collisionObject.Radius, Vector2.Zero),
                 CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
                 CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
-                CollisionObjectType.Polygon => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polygon
-                CollisionObjectType.Polyline => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to bounding box for polyline
+                CollisionObjectType.Polygon => CreatePolygonCollisionShape(collisionObject),
+                CollisionObjectType.Polyline => CreatePolylineCollisionShape(collisionObject),
                 CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
                 CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
                 _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
@@ -451,5 +451,70 @@ public static class TilemapCollisionExtensions
     private static void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color)
     {
         CollisionDraw.DrawLine(spriteBatch, start, end, color);
+    }
+    
+    /// <summary>
+    /// Creates a collision shape for polygon objects using their bounding box.
+    /// </summary>
+    private static ICollisionShape CreatePolygonCollisionShape(CollisionObject collisionObject)
+    {
+        if (collisionObject.PolygonPoints == null || collisionObject.PolygonPoints.Length == 0)
+        {
+            // Fallback to object's width/height if no points
+            return new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+        }
+        
+        // Calculate bounding box from polygon points
+        var bounds = CalculateBoundingBox(collisionObject.PolygonPoints);
+        return new CollisionRectangle((int)bounds.Width, (int)bounds.Height, new Vector2(bounds.X, bounds.Y));
+    }
+    
+    /// <summary>
+    /// Creates a collision shape for polyline objects using their bounding box with padding.
+    /// </summary>
+    private static ICollisionShape CreatePolylineCollisionShape(CollisionObject collisionObject)
+    {
+        if (collisionObject.PolygonPoints == null || collisionObject.PolygonPoints.Length == 0)
+        {
+            // Fallback to object's width/height if no points
+            return new CollisionRectangle(Math.Max(collisionObject.Width, 4), Math.Max(collisionObject.Height, 4), Vector2.Zero);
+        }
+        
+        // Calculate bounding box from polyline points with padding for line thickness
+        var bounds = CalculateBoundingBox(collisionObject.PolygonPoints);
+        const int lineThickness = 4; // Add padding for line thickness
+        return new CollisionRectangle(
+            (int)Math.Max(bounds.Width, lineThickness), 
+            (int)Math.Max(bounds.Height, lineThickness), 
+            new Vector2(bounds.X - lineThickness/2, bounds.Y - lineThickness/2)
+        );
+    }
+    
+    /// <summary>
+    /// Calculates the bounding box for an array of points.
+    /// </summary>
+    private static Rectangle CalculateBoundingBox(Vector2[] points)
+    {
+        if (points.Length == 0) return Rectangle.Empty;
+        
+        float minX = points[0].X;
+        float minY = points[0].Y;
+        float maxX = points[0].X;
+        float maxY = points[0].Y;
+        
+        for (int i = 1; i < points.Length; i++)
+        {
+            minX = Math.Min(minX, points[i].X);
+            minY = Math.Min(minY, points[i].Y);
+            maxX = Math.Max(maxX, points[i].X);
+            maxY = Math.Max(maxY, points[i].Y);
+        }
+        
+        return new Rectangle(
+            (int)minX, 
+            (int)minY, 
+            (int)(maxX - minX), 
+            (int)(maxY - minY)
+        );
     }
 }
