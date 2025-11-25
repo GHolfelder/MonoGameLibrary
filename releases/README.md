@@ -4,6 +4,17 @@ This directory contains detailed release notes for each version of MonoGame Libr
 
 ## Latest Releases
 
+### [Version 1.0.20](ReleaseNotes-1.0.20.md) - November 25, 2025
+**Content Scaling System & Steam Deck Support**
+- Comprehensive virtual resolution system with automatic scaling and letterboxing/pillarboxing
+- Steam Deck auto-detection with native resolution (1280x800) and fullscreen optimization
+- Monitor resolution awareness with intelligent window sizing
+- Enhanced input system with virtual coordinate transformation
+- BeginScaled() Scene method for one-line content scaling
+- Cross-platform compatibility from 1366x768 laptops to 4K monitors
+
+## Release History
+
 ### [Version 1.0.19](ReleaseNotes-1.0.19.md) - November 25, 2025
 **Developer Mode & Enhanced Object Layer Support**
 - F1/F2 hotkey developer mode with collision visualization
@@ -11,8 +22,6 @@ This directory contains detailed release notes for each version of MonoGame Libr
 - Advanced polyline collision detection with geometric precision
 - PlayerSprite object layer integration
 - Zero overhead developer features in release builds
-
-## Release History
 
 ### Version 1.0.18
 - Enhanced Tilemap System & Multi-Shape Collision Support
