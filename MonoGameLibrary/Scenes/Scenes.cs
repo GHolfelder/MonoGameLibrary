@@ -72,8 +72,7 @@ public abstract class Scene : IDisposable
     /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
     public virtual void Update(GameTime gameTime)
     {
-#if DEBUG
-        // Developer mode hotkeys
+        // Developer mode hotkeys (available when game is in debug mode)
         if (Core.Input.Keyboard.WasKeyJustPressed(Microsoft.Xna.Framework.Input.Keys.F1))
         {
             Core.ToggleDeveloperMode();
@@ -83,7 +82,6 @@ public abstract class Scene : IDisposable
         {
             Core.ToggleCollisionBoxes();
         }
-#endif
     }
 
     /// <summary>
@@ -101,7 +99,6 @@ public abstract class Scene : IDisposable
     /// </summary>
     protected virtual void DrawDeveloperOverlay()
     {
-#if DEBUG
         if (Core.DeveloperMode)
         {
             // Begin a separate SpriteBatch session for developer overlay
@@ -121,7 +118,6 @@ public abstract class Scene : IDisposable
             
             Core.SpriteBatch.End();
         }
-#endif
     }
 
     /// <summary>
