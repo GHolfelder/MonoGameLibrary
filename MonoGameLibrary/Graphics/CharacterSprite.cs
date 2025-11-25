@@ -347,8 +347,17 @@ public class CharacterSprite
         // Draw collision if global developer mode collision boxes are active
         if (Core.ShowCollisionBoxes && Collision != null)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"Drawing collision for CharacterSprite at {drawPosition}");
+#endif
             Collision.Draw(spriteBatch, drawPosition);
         }
+#if DEBUG
+        else if (Core.ShowCollisionBoxes && Collision == null)
+        {
+            System.Diagnostics.Debug.WriteLine($"CharacterSprite at {drawPosition} has no collision component - cannot draw collision boxes");
+        }
+#endif
     }
 
     /// <summary>
@@ -372,8 +381,17 @@ public class CharacterSprite
         // Draw collision if global developer mode collision boxes are active
         if (Core.ShowCollisionBoxes && Collision != null)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"Drawing placeholder collision for CharacterSprite at {position}");
+#endif
             Collision.Draw(spriteBatch, position);
         }
+#if DEBUG
+        else if (Core.ShowCollisionBoxes && Collision == null)
+        {
+            System.Diagnostics.Debug.WriteLine($"CharacterSprite placeholder at {position} has no collision component");
+        }
+#endif
     }
     
     /// <summary>
