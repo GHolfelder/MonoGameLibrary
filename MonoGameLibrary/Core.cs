@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -269,23 +271,56 @@ public class Core : Game
 
     /// <summary>
     /// Creates a new Core instance with automatic window sizing based on monitor resolution.
+    /// Automatically enables fullscreen on Steam Deck.
     /// </summary>
     /// <param name="title">The title to display in the title bar of the game window.</param>
-    /// <param name="fullScreen">Indicates if the game should start in fullscreen mode.</param>
+    /// <param name="fullScreen">Indicates if the game should start in fullscreen mode (automatically true on Steam Deck).</param>
     /// <param name="windowSizePercent">The percentage of monitor size to use (default: 0.8 for 80%).</param>
     public Core(string title, bool fullScreen = false, float windowSizePercent = 0.8f)
     {
+        // Automatically enable fullscreen on Steam Deck
+        if (IsSteamDeck)
+        {
+            fullScreen = true;
+        }
+        
         var monitorSize = GetMonitorAwareSize(windowSizePercent);
         Initialize(title, monitorSize.X, monitorSize.Y, fullScreen);
     }
+    
+    /// <summary>
+    /// Creates a new Core instance optimized for Steam Deck.
+    /// Automatically runs in fullscreen with Steam Deck optimized settings.
+    /// </summary>
+    /// <param name="title">The title to display in the title bar of the game window.</param>
+    public Core(string title)
+    {
+        if (IsSteamDeck)
+        {
+            // Steam Deck: Use native resolution in fullscreen
+            Initialize(title, 1280, 800, true);
+        }
+        else
+        {
+            // Other devices: Use monitor-aware sizing
+            var monitorSize = GetMonitorAwareSize(0.8f);
+            Initialize(title, monitorSize.X, monitorSize.Y, false);
+        }
+    }
 
     /// <summary>
-    /// Gets a window size appropriate for the current monitor
+    /// Gets a window size appropriate for the current monitor or device
     /// </summary>
     /// <param name="sizePercent">Percentage of monitor size to use (0.1 to 1.0)</param>
     /// <returns>Point containing width and height</returns>
     public static Point GetMonitorAwareSize(float sizePercent = 0.8f)
     {
+        // Steam Deck: Use native resolution
+        if (IsSteamDeck)
+        {
+            return new Point(1280, 800);
+        }
+        
         // Clamp percentage to reasonable range
         sizePercent = Math.Clamp(sizePercent, 0.1f, 1.0f);
         

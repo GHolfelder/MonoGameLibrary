@@ -64,6 +64,48 @@ Common utilities, logging system, and helper classes.
 
 ## Featured Systems
 
+### 🖥️ Resolution-Independent Content Scaling
+Automatic content scaling system for consistent visual experience across all screen resolutions:
+
+```csharp
+// Scene-based automatic scaling
+public class GameScene : Scene
+{
+    protected override void Draw(GameTime gameTime)
+    {
+        BeginScaled(); // Automatic scaling with letterboxing/pillarboxing
+        {
+            // All coordinates use virtual resolution (default 1920x1080)
+            player.Draw(Core.SpriteBatch, playerPosition);
+            tilemap.Draw(Core.SpriteBatch, Vector2.Zero);
+            
+            // UI positioned in virtual coordinates
+            Core.SpriteBatch.DrawString(font, "Score: 1000", new Vector2(50, 50), Color.White);
+        }
+        Core.SpriteBatch.End();
+    }
+}
+
+// Manual scaling for non-Scene classes
+Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+// Drawing code here uses virtual coordinates
+Core.SpriteBatch.End();
+
+// Input automatically converted to virtual coordinates
+var mousePos = Core.Input.Mouse.VirtualPosition;
+var virtualClick = Core.Input.Mouse.VirtualX; // Always in virtual space
+```
+
+**Key Features:**
+- **Virtual Resolution System** - Design for fixed resolution (default 1920x1080)
+- **Uniform Scaling** - Maintains aspect ratio with letterbox/pillarbox when needed
+- **Input Transformation** - Mouse coordinates automatically converted to virtual space
+- **Scene Integration** - `BeginScaled()` method for automatic scaling in Scene classes
+- **Monitor Awareness** - Automatic window sizing based on monitor resolution
+- **Cross-Resolution Consistency** - Same visual experience from 1366x768 to 4K displays
+
+📖 **[Complete Content Scaling Documentation](ContentScalingExample.md)**
+
 ### 🗺️ JSON Tilemap System with Z-Ordering & Collision
 Professional tilemap rendering with proper depth management and comprehensive collision detection:
 

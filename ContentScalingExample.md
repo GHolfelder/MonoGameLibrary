@@ -10,22 +10,108 @@ The content scaling system consists of:
 - **Input Transformation**: Mouse coordinates automatically converted to virtual space
 - **Matrix Transformation**: Automatic letterboxing/pillarboxing for different screen sizes
 
+## Scaling Methods Overview
+
+### BeginScaled() - Scene Class Method
+
+`BeginScaled()` is a **protected method** available only in classes that inherit from the `Scene` base class:
+
+```csharp
+public class GameScene : Scene
+{
+    protected override void Draw(GameTime gameTime)
+    {
+        Core.GraphicsDevice.Clear(Color.Black);
+        
+        // Available because this class inherits from Scene
+        BeginScaled();
+        {
+            // All drawing operations use virtual coordinates
+            player.Draw(Core.SpriteBatch, playerPosition);
+            tilemap.Draw(Core.SpriteBatch, Vector2.Zero);
+        }
+        Core.SpriteBatch.End();
+    }
+}
+```
+
+**Advantages:**
+- Simple, one-line setup
+- Handles all SpriteBatch parameters automatically
+- Integrates with Scene lifecycle
+
+### Manual Scaling - Any Class
+
+For classes that don't inherit from Scene, use manual scaling with `Core.ScaleMatrix`:
+
+```csharp
+public class UIManager
+{
+    public void Draw()
+    {
+        // Available in any class
+        Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+        {
+            // Drawing operations use virtual coordinates
+            DrawMainMenu();
+            DrawHUD();
+        }
+        Core.SpriteBatch.End();
+    }
+}
+```
+
+**Advantages:**
+- Works in any class
+- Full control over SpriteBatch parameters
+- Can be combined with custom effects or blend states
+
 ## Basic Usage
 
 ### Setting Up Content Scaling
 
 ```csharp
-// Option 1: Use default virtual resolution (1920x1080)
-var core = new Core("My Game");
+// Option 1: Simple constructor with automatic Steam Deck detection
+var core = new Core("My Game"); // Automatically fullscreen on Steam Deck
 
-// Option 2: Set custom virtual resolution
+// Option 2: Use default virtual resolution (1920x1080)
+var core = new Core("My Game", fullScreen: false); // Forced windowed (overrides Steam Deck)
+
+// Option 3: Set custom virtual resolution
 var core = new Core("My Game");
 Core.VirtualResolution = new Point(1280, 720);
 
-// Option 3: Use monitor-aware sizing with virtual resolution
-var core = new Core("My Game", monitorPercentage: 80);
+// Option 4: Use monitor-aware sizing with virtual resolution
+var core = new Core("My Game", fullScreen: false, windowSizePercent: 80);
 Core.VirtualResolution = new Point(1920, 1080);
+
+// Option 5: Manual window size control
+var core = new Core("My Game", width: 1920, height: 1080, fullScreen: false);
 ```
+
+### Steam Deck Optimization
+
+The library automatically detects Steam Deck devices and optimizes settings:
+
+```csharp
+// Check if running on Steam Deck
+if (Core.IsSteamDeck)
+{
+    // Automatic optimizations applied:
+    // - Native 1280x800 resolution
+    // - Fullscreen mode enabled
+    // - Virtual resolution scaling works perfectly
+}
+
+// Simple constructor automatically handles Steam Deck
+var core = new Core("My Game"); // Fullscreen 1280x800 on Steam Deck, windowed on PC
+```
+
+**Steam Deck Features:**
+- **Automatic Detection**: Checks Linux environment, hardware identifiers, and Steam variables
+- **Native Resolution**: Uses Steam Deck's 1280x800 resolution automatically  
+- **Fullscreen Mode**: Automatically enables fullscreen for optimal Steam Deck experience
+- **Perfect Scaling**: Virtual resolution system works seamlessly with Steam Deck's aspect ratio
 
 ### Rendering with Content Scaling
 
@@ -37,7 +123,7 @@ protected override void Draw(GameTime gameTime)
     Core.GraphicsDevice.Clear(Color.Black);
 
     // Automatic content scaling with letterboxing/pillarboxing
-    using (Core.SpriteBatch.BeginScaled())
+    BeginScaled(); // Protected method in Scene base class
     {
         // All drawing operations here use virtual coordinates
         Core.SpriteBatch.DrawString(font, "Hello World", new Vector2(100, 100), Color.White);
@@ -48,6 +134,23 @@ protected override void Draw(GameTime gameTime)
         // UI elements at virtual positions
         Core.SpriteBatch.Draw(buttonTexture, new Vector2(50, 950), Color.White);
     }
+    Core.SpriteBatch.End();
+}
+```
+
+**Alternative for non-Scene classes:**
+```csharp
+protected override void Draw(GameTime gameTime)
+{
+    Core.GraphicsDevice.Clear(Color.Black);
+
+    // Manual content scaling using transformation matrix
+    Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+    {
+        // All drawing operations here use virtual coordinates
+        player.Draw(Core.SpriteBatch, gameTime);
+    }
+    Core.SpriteBatch.End();
 }
 ```
 
@@ -83,13 +186,22 @@ protected override void Update(GameTime gameTime)
 
 ### Target Virtual Resolution: 1920x1080
 
-| Screen Resolution | Scale Factor | Letterbox/Pillarbox | Effective Area |
-|------------------|--------------|---------------------|----------------|
-| 1920x1080        | 1.0          | None                | Full screen    |
-| 2560x1440        | 1.33         | None                | Full screen    |
-| 1366x768         | 0.71         | Letterbox           | Black bars top/bottom |
-| 1280x1024        | 0.67         | Pillarbox           | Black bars left/right |
-| 3840x2160 (4K)   | 2.0          | None                | Full screen    |
+| Screen Resolution | Device Type  | Scale Factor | Letterbox/Pillarbox | Effective Area |
+|------------------|--------------|--------------|---------------------|----------------|
+| 1920x1080        | PC Monitor   | 1.0          | None                | Full screen    |
+| 2560x1440        | PC Monitor   | 1.33         | None                | Full screen    |
+| 1366x768         | Laptop       | 0.71         | Letterbox           | Black bars top/bottom |
+| 1280x1024        | PC Monitor   | 0.67         | Pillarbox           | Black bars left/right |
+| 3840x2160 (4K)   | PC Monitor   | 2.0          | None                | Full screen    |
+| **1280x800**     | **Steam Deck** | **0.67**   | **None**            | **Full screen** |
+
+### Steam Deck Considerations
+
+The Steam Deck's 1280x800 resolution (16:10 aspect ratio) works perfectly with the scaling system:
+- **No letterboxing**: 16:10 ratio scales uniformly with 1920x1080 (16:9) virtual resolution
+- **Crisp scaling**: 0.67x scale factor provides excellent visual quality
+- **Touch support**: Virtual input coordinates work with Steam Deck's touchscreen
+- **Performance**: Lower resolution improves performance on Steam Deck's mobile GPU
 
 ### Design Guidelines
 
@@ -121,8 +233,20 @@ var uniformScale = Math.Min(scaleX, scaleY);  // Maintains aspect ratio
 ### Manual Matrix Application
 
 ```csharp
-// If you need manual control over the transformation matrix
+// For non-Scene classes or when you need manual control over the transformation matrix
 Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+// Your drawing code here
+Core.SpriteBatch.End();
+
+// With additional SpriteBatch parameters
+Core.SpriteBatch.Begin(
+    sortMode: SpriteSortMode.Deferred,
+    blendState: BlendState.AlphaBlend,
+    samplerState: SamplerState.PointClamp,
+    depthStencilState: null,
+    rasterizerState: null,
+    effect: null,
+    transformMatrix: Core.ScaleMatrix);
 // Your drawing code here
 Core.SpriteBatch.End();
 ```
@@ -152,14 +276,46 @@ private void ToggleFullscreen()
 }
 ```
 
-### Resolution-Independent UI
+### Resolution-Independent UI (Scene class)
 
 ```csharp
-// UI positioned in virtual coordinates - works on any screen size
-var playButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 400);
-var settingsButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 500);
-var quitButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 600);
+protected override void Draw(GameTime gameTime)
+{
+    Core.GraphicsDevice.Clear(Color.Black);
+    
+    BeginScaled(); // Scene protected method
+    {
+        // UI positioned in virtual coordinates - works on any screen size
+        var playButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 400);
+        var settingsButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 500);
+        var quitButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 600);
+        
+        Core.SpriteBatch.Draw(playButtonTexture, playButtonPos, Color.White);
+        Core.SpriteBatch.Draw(settingsButtonTexture, settingsButtonPos, Color.White);
+        Core.SpriteBatch.Draw(quitButtonTexture, quitButtonPos, Color.White);
+    }
+    Core.SpriteBatch.End();
+}
 ```
+
+### Resolution-Independent UI (Non-Scene class)
+
+```csharp
+public void DrawUI()
+{
+    // Manual scaling for classes not inheriting from Scene
+    Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+    {
+        var playButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 400);
+        var settingsButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 500);
+        var quitButtonPos = new Vector2(Core.VirtualResolution.X / 2 - 100, 600);
+        
+        Core.SpriteBatch.Draw(playButtonTexture, playButtonPos, Color.White);
+        Core.SpriteBatch.Draw(settingsButtonTexture, settingsButtonPos, Color.White);
+        Core.SpriteBatch.Draw(quitButtonTexture, quitButtonPos, Color.White);
+    }
+    Core.SpriteBatch.End();
+}
 
 ### Dynamic Resolution Changes
 

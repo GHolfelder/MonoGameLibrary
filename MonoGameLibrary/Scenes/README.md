@@ -21,6 +21,12 @@ The Scenes namespace provides a scene management system for organizing game stat
 3. **Update/Draw Loop**: Scene runs normally
 4. **Disposal**: `Dispose()` is called, `UnloadContent()` cleans up resources
 
+### Content Scaling Integration
+- **BeginScaled()**: Protected method for automatic content scaling
+- **Virtual Coordinates**: All drawing operations use virtual resolution coordinates
+- **Automatic Scaling**: Handles letterboxing/pillarboxing automatically
+- **Input Transformation**: Mouse coordinates automatically converted to virtual space
+
 ### Scene Transitions
 - Managed by `Core.ChangeScene()` method
 - Old scene is disposed before new scene is initialized
@@ -61,14 +67,20 @@ public class GameplayScene : Scene
 
     public override void Draw(GameTime gameTime)
     {
-        Core.SpriteBatch.Begin();
+        Core.GraphicsDevice.Clear(Color.DarkBlue);
         
-        // Draw background
-        Core.SpriteBatch.Draw(_backgroundTexture, Vector2.Zero, Color.White);
-        
-        // Draw player
-        _player.Draw(Core.SpriteBatch);
-        
+        // Use BeginScaled() for automatic content scaling
+        BeginScaled();
+        {
+            // All coordinates are in virtual space (e.g., 1920x1080)
+            Core.SpriteBatch.Draw(_backgroundTexture, Vector2.Zero, Color.White);
+            
+            // Player draws at virtual coordinates
+            _player.Draw(Core.SpriteBatch);
+            
+            // UI elements positioned in virtual space
+            Core.SpriteBatch.DrawString(_font, "Score: 1000", new Vector2(50, 50), Color.White);
+        }
         Core.SpriteBatch.End();
     }
 
@@ -83,6 +95,49 @@ public class GameplayScene : Scene
         base.Dispose(disposing);
     }
 }
+```
+
+### Content Scaling with BeginScaled()
+
+The Scene base class provides the `BeginScaled()` protected method for automatic content scaling:
+
+```csharp
+public class GameScene : Scene
+{
+    protected override void Draw(GameTime gameTime)
+    {
+        Core.GraphicsDevice.Clear(Color.Black);
+        
+        // BeginScaled() automatically applies content scaling matrix
+        BeginScaled();
+        {
+            // All drawing operations here use virtual coordinates
+            // Works consistently across all screen resolutions
+            
+            tilemap.Draw(Core.SpriteBatch, Vector2.Zero);
+            player.Draw(Core.SpriteBatch, playerPosition);
+            
+            // UI elements positioned in virtual space
+            Core.SpriteBatch.DrawString(font, "Health: 100", new Vector2(50, 50), Color.White);
+        }
+        Core.SpriteBatch.End();
+    }
+}
+```
+
+**BeginScaled() Features:**
+- **Automatic Scaling**: Applies `Core.ScaleMatrix` transformation
+- **Letterbox/Pillarbox**: Maintains aspect ratio with black bars when needed
+- **Virtual Coordinates**: All positions use virtual resolution (default 1920x1080)
+- **Parameter Support**: Accepts SpriteBatch parameters (sortMode, blendState, etc.)
+
+**Alternative Manual Scaling:**
+For classes not inheriting from Scene:
+```csharp
+// Manual scaling approach
+Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+// Drawing code here
+Core.SpriteBatch.End();
 ```
 
 ### Scene Transitions
@@ -117,7 +172,31 @@ public class MainMenuScene : Scene
 
     public override void Update(GameTime gameTime)
     {
-        // Menu navigation
+        base.Update(gameTime); // Important: handles developer mode hotkeys
+        
+        // Input uses virtual coordinates automatically
+        var mousePos = Core.Input.Mouse.VirtualPosition;
+        
+        // Menu navigation with virtual coordinates
+        if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Up))
+        {
+            _selectedIndex = Math.Max(0, _selectedIndex - 1);
+        }
+        else if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Down))
+        {
+            _selectedIndex = Math.Min(_menuItems.Length - 1, _selectedIndex + 1);
+        }
+        else if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter) ||
+                Core.Input.Mouse.WasButtonJustPressed(MouseButton.Left))
+        {
+            // Check if mouse is over selected menu item (virtual coordinates)
+            var menuItemRect = GetMenuItemRect(_selectedIndex); // Returns virtual coordinates
+            if (menuItemRect.Contains(mousePos) || Core.Input.Keyboard.WasKeyJustPressed(Keys.Enter))
+            {
+                SelectMenuItem(_selectedIndex);
+            }
+        }
+    }
         if (Core.Input.Keyboard.WasKeyJustPressed(Keys.Up))
             _selectedIndex = Math.Max(0, _selectedIndex - 1);
             
@@ -144,23 +223,34 @@ public class MainMenuScene : Scene
 
     public override void Draw(GameTime gameTime)
     {
-        Core.GraphicsDevice.Clear(Color.Black);
+        Core.GraphicsDevice.Clear(Color.Navy);
         
-        Core.SpriteBatch.Begin();
-        
-        // Draw title
-        var titlePos = new Vector2(400, 100);
-        Core.SpriteBatch.DrawString(_titleFont, "My Game", titlePos, Color.White);
-        
-        // Draw menu items
-        for (int i = 0; i < _menuItems.Length; i++)
+        BeginScaled(); // Use virtual coordinates
         {
-            var itemPos = new Vector2(400, 300 + i * 50);
-            var color = i == _selectedIndex ? Color.Yellow : Color.White;
-            Core.SpriteBatch.DrawString(_menuFont, _menuItems[i], itemPos, color);
+            // Title positioned in virtual space
+            var titlePos = new Vector2(Core.VirtualResolution.X / 2, 200);
+            var titleOrigin = _titleFont.MeasureString("My Game") / 2;
+            Core.SpriteBatch.DrawString(_titleFont, "My Game", titlePos, Color.White, 0f, titleOrigin, 1f, SpriteEffects.None, 0f);
+            
+            // Menu items in virtual coordinates
+            for (int i = 0; i < _menuItems.Length; i++)
+            {
+                var menuPos = new Vector2(Core.VirtualResolution.X / 2, 400 + i * 60);
+                var color = i == _selectedIndex ? Color.Yellow : Color.White;
+                var origin = _menuFont.MeasureString(_menuItems[i]) / 2;
+                
+                Core.SpriteBatch.DrawString(_menuFont, _menuItems[i], menuPos, color, 0f, origin, 1f, SpriteEffects.None, 0f);
+            }
         }
-        
         Core.SpriteBatch.End();
+    }
+    
+    private Rectangle GetMenuItemRect(int index)
+    {
+        // Returns rectangle in virtual coordinates
+        var menuPos = new Vector2(Core.VirtualResolution.X / 2, 400 + index * 60);
+        var textSize = _menuFont.MeasureString(_menuItems[index]);
+        return new Rectangle((int)(menuPos.X - textSize.X / 2), (int)(menuPos.Y - textSize.Y / 2), (int)textSize.X, (int)textSize.Y);
     }
 }
 ```
