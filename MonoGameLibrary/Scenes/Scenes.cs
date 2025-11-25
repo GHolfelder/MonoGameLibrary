@@ -94,29 +94,34 @@ public abstract class Scene : IDisposable
     /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
     public virtual void Draw(GameTime gameTime)
     {
-        // Base Scene class doesn't start SpriteBatch - derived classes should handle that
-        // The developer overlay will be drawn by derived classes after their content
+        // Draw developer overlay automatically at the end of the frame
+        DrawDeveloperOverlay();
     }
     
     /// <summary>
-    /// Draws developer mode overlay indicators (call this WITHIN an active SpriteBatch)
+    /// Draws developer mode overlay indicators
     /// </summary>
-    protected virtual void DrawDeveloperOverlay(SpriteBatch spriteBatch)
+    protected virtual void DrawDeveloperOverlay()
     {
 #if DEBUG
         if (Core.DeveloperMode)
         {
+            // Begin a separate SpriteBatch session for developer overlay
+            Core.SpriteBatch.Begin();
+            
             // Draw small red circle at top center to indicate dev mode
             var screenCenter = new Vector2(Core.Graphics.PreferredBackBufferWidth / 2f, 20);
-            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawCircle(spriteBatch, screenCenter, 8f, Color.Red);
+            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawCircle(Core.SpriteBatch, screenCenter, 8f, Color.Red);
             
             // Optional: Draw additional indicators for specific modes
             if (Core.ShowCollisionBoxes)
             {
                 var boxIndicator = new Vector2(screenCenter.X + 25, 20);
                 var rect = new Rectangle((int)boxIndicator.X - 6, (int)boxIndicator.Y - 6, 12, 12);
-                MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawRectangle(spriteBatch, rect, Color.Yellow);
+                MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawRectangle(Core.SpriteBatch, rect, Color.Yellow);
             }
+            
+            Core.SpriteBatch.End();
         }
 #endif
     }

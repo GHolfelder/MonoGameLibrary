@@ -45,10 +45,10 @@ namespace MonoGameLibrary.Tests
                     new Vector2(10, 10), Color.White);
             }
             
-            // Draw developer overlay within the active SpriteBatch
-            DrawDeveloperOverlay(Core.SpriteBatch);
-            
             Core.SpriteBatch.End();
+            
+            // Call base to automatically draw developer overlay
+            base.Draw(gameTime);
         }
     }
 

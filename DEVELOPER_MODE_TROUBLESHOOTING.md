@@ -15,24 +15,24 @@
 ## Common Issues & Solutions
 
 ### Issue 1: No Visual Indicators Appearing
-**Cause**: Scene doesn't call `DrawDeveloperOverlay(spriteBatch)` within an active SpriteBatch
+**Cause**: Scene doesn't call `base.Draw(gameTime)`
 
-**Solution**: In your scene's Draw method, add:
+**Solution**: In your scene's Draw method, make sure to call the base class:
 ```csharp
 public override void Draw(GameTime gameTime)
 {
     Core.GraphicsDevice.Clear(Color.CornflowerBlue);
     
     Core.SpriteBatch.Begin();
-    
     // Your scene drawing code here...
-    
-    // Add this line to draw developer indicators:
-    DrawDeveloperOverlay(Core.SpriteBatch);
-    
     Core.SpriteBatch.End();
+    
+    // Call base to automatically draw developer overlay
+    base.Draw(gameTime);
 }
 ```
+
+**Note**: The base Scene class now handles SpriteBatch management for developer overlay automatically.
 
 ### Issue 2: F1/F2 Keys Not Working
 **Cause**: Scene doesn't call `base.Update(gameTime)` or input isn't being updated
@@ -80,6 +80,6 @@ public override void Update(GameTime gameTime)
 ## Verification Checklist
 - [ ] Running Debug build (not Release)
 - [ ] Scene calls `base.Update(gameTime)`
-- [ ] Scene calls `DrawDeveloperOverlay(Core.SpriteBatch)` within SpriteBatch.Begin/End
+- [ ] Scene calls `base.Draw(gameTime)` 
 - [ ] Console shows debug messages when pressing F1/F2
 - [ ] CollisionDraw.Initialize() was called in Core.Initialize()
