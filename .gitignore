@@ -9,7 +9,9 @@
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
+# Note: [Rr]eleases/ removed to allow project releases folder
+*/[Rr]elease/
+*/[Rr]eleases/
 x64/
 x86/
 build/
