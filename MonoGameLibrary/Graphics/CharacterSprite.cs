@@ -326,10 +326,8 @@ public class CharacterSprite
         if (ForceShowPlaceholder)
         {
             DrawPlaceholderSprite(spriteBatch, drawPosition);
-            return;
         }
-        
-        if (_currentAnimation != null)
+        else if (_currentAnimation != null)
         {
             // Apply all sprite properties to match Sprite class behavior
             _currentAnimation.Color = Color;
@@ -344,6 +342,12 @@ public class CharacterSprite
         {
             // Draw placeholder sprite when animation is missing
             DrawPlaceholderSprite(spriteBatch, drawPosition);
+        }
+        
+        // Draw collision if global developer mode collision boxes are active
+        if (Core.ShowCollisionBoxes && Collision != null)
+        {
+            Collision.Draw(spriteBatch, drawPosition);
         }
     }
 
@@ -364,6 +368,12 @@ public class CharacterSprite
             _placeholderSprite.Draw(spriteBatch, position);
         }
         // If no placeholder sprite is available, don't draw anything
+        
+        // Draw collision if global developer mode collision boxes are active
+        if (Core.ShowCollisionBoxes && Collision != null)
+        {
+            Collision.Draw(spriteBatch, position);
+        }
     }
     
     /// <summary>
