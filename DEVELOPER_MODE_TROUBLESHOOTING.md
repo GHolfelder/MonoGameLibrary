@@ -1,5 +1,13 @@
 # Developer Mode Troubleshooting Guide
 
+## How It Should Work (Automatic)
+
+When you press F2 to enable collision boxes, they should automatically appear for:
+
+1. **Sprites**: Any sprite drawn with `sprite.Draw()` will show collision boxes automatically
+2. **CharacterSprites**: Any character sprite drawn will show collision boxes automatically  
+3. **Tilemaps**: Call `tilemap.DrawAutoCollision(spriteBatch, position)` in your draw method
+
 ## Quick Test Steps
 
 1. **Verify Debug Build**: Make sure you're running a Debug build, not Release
@@ -11,6 +19,29 @@
    - "F1 key detected - toggling developer mode"
    - "Developer Mode: True/False"
    - "Show Collision Boxes: True/False"
+
+3. **Add Tilemap Collision**: In your scene's Draw method, add:
+   ```csharp
+   public override void Draw(GameTime gameTime)
+   {
+       Core.GraphicsDevice.Clear(Color.Black);
+       
+       Core.SpriteBatch.Begin();
+       
+       // Draw your tilemap
+       tilemap.Draw(spriteBatch, position);
+       
+       // Add this line to show tilemap collision boxes automatically:
+       tilemap.DrawAutoCollision(Core.SpriteBatch, position);
+       
+       // Draw sprites (collision boxes automatic)
+       mySprite.Draw(Core.SpriteBatch, spritePosition);
+       
+       Core.SpriteBatch.End();
+       
+       base.Draw(gameTime); // Shows developer mode indicators
+   }
+   ```
 
 ## Common Issues & Solutions
 

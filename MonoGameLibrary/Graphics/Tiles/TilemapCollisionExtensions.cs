@@ -709,4 +709,28 @@ public static class TilemapCollisionExtensions
             (int)(maxY - minY)
         );
     }
+
+    /// <summary>
+    /// Automatically draws collision visualization for all object layers when developer mode is active.
+    /// Call this in your tilemap drawing code to show collision boxes automatically.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to draw collision for.</param>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position offset to draw the tilemap at.</param>
+    /// <param name="collisionColor">The color to draw collision rectangles with (default: Color.Red).</param>
+    public static void DrawAutoCollision(this Tilemap tilemap, SpriteBatch spriteBatch, Vector2 position, Color? collisionColor = null)
+    {
+        if (!Core.ShowCollisionBoxes) return;
+        
+        var color = collisionColor ?? Color.Red;
+        
+        // Draw collision for all object layers
+        foreach (var layer in tilemap.ObjectLayers)
+        {
+            if (layer.Visible)
+            {
+                tilemap.DrawObjectLayerAsCollision(spriteBatch, layer.Name, position, color);
+            }
+        }
+    }
 }

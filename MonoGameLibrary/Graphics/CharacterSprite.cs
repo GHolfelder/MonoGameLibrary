@@ -438,8 +438,8 @@ public class CharacterSprite
             DrawPlaceholderSprite(spriteBatch, drawPosition);
         }
         
-        // Draw collision if requested and available
-        if (showCollision && Collision != null)
+        // Draw collision if requested OR if global developer mode is active
+        if ((showCollision || Core.ShowCollisionBoxes) && Collision != null)
         {
             Collision.Draw(spriteBatch, drawPosition);
         }
