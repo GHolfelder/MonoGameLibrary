@@ -4,6 +4,15 @@ This directory contains detailed release notes for each version of MonoGame Libr
 
 ## Latest Releases
 
+### [Version 1.0.21](ReleaseNotes-1.0.21.md) - November 27, 2025
+**Comprehensive 2D Camera System**
+- Professional-grade camera architecture with position, zoom, rotation, and following capabilities
+- Configurable character screen coverage system with intelligent zoom limits  
+- Multi-input controls (keyboard, gamepad, mouse wheel) with customizable bindings
+- Smooth camera following with interpolation and performance monitoring
+- World coordinate input integration and comprehensive diagnostic tools
+- Complete documentation with examples, troubleshooting, and migration guide
+
 ### [Version 1.0.20](ReleaseNotes-1.0.20.md) - November 25, 2025
 **Content Scaling System & Steam Deck Support**
 - Comprehensive virtual resolution system with automatic scaling and letterboxing/pillarboxing

@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Audio;
+using MonoGameLibrary.Graphics.Camera;
 using MonoGameLibrary.Graphics.Collision;
 using MonoGameLibrary.Input;
 using MonoGameLibrary.Scenes;
@@ -83,6 +84,19 @@ public class Core : Game
             
             return Matrix.CreateScale(scale.X, scale.Y, 1f) * 
                    Matrix.CreateTranslation(offsetX, offsetY, 0f);
+        }
+    }
+
+    /// <summary>
+    /// Gets the combined transformation matrix for content scaling and camera positioning.
+    /// Use this for world objects that should be affected by camera zoom and position.
+    /// </summary>
+    public static Matrix CameraMatrix
+    {
+        get
+        {
+            if (Camera == null) return ScaleMatrix;
+            return Camera.ViewMatrix * ScaleMatrix;
         }
     }
 
@@ -180,6 +194,16 @@ public class Core : Game
     /// Gets a reference to the audio control system.
     /// </summary>
     public static AudioController Audio { get; private set; }
+
+    /// <summary>
+    /// Gets the 2D camera system for zoom and positioning control.
+    /// </summary>
+    public static Graphics.Camera.Camera2D Camera { get; private set; }
+
+    /// <summary>
+    /// Gets the camera controller for handling input-based camera operations.
+    /// </summary>
+    public static Graphics.Camera.CameraController CameraController { get; private set; }
 
     /// <summary>
     /// Gets the primary monitor's display mode information
@@ -302,6 +326,30 @@ public class Core : Game
         var viewport = ScaledViewport;
         
         return (virtualPosition * scale) + new Vector2(viewport.X, viewport.Y);
+    }
+
+    /// <summary>
+    /// Converts screen coordinates to world coordinates (includes camera transformation).
+    /// </summary>
+    /// <param name="screenPosition">The screen position to convert</param>
+    /// <returns>World coordinates</returns>
+    public static Vector2 ScreenToWorld(Vector2 screenPosition)
+    {
+        var virtualPos = ScreenToVirtual(screenPosition);
+        if (Camera == null) return virtualPos;
+        return Camera.ScreenToWorld(virtualPos);
+    }
+
+    /// <summary>
+    /// Converts world coordinates to screen coordinates (includes camera transformation).
+    /// </summary>
+    /// <param name="worldPosition">The world position to convert</param>
+    /// <returns>Screen coordinates</returns>
+    public static Vector2 WorldToScreen(Vector2 worldPosition)
+    {
+        if (Camera == null) return VirtualToScreen(worldPosition);
+        var virtualPos = Camera.WorldToScreen(worldPosition);
+        return VirtualToScreen(virtualPos);
     }
 
     /// <summary>
@@ -456,6 +504,14 @@ public class Core : Game
 
         // Create a new audio controller.
         Audio = new AudioController();
+
+        // Create and initialize camera system
+        Camera = new Graphics.Camera.Camera2D();
+        Camera.ResetToDefaultZoom();
+        Camera.SetZoomLimitsForCharacter(64f); // Default character size
+        
+        // Create camera controller for input handling
+        CameraController = new Graphics.Camera.CameraController(Camera);
     }
 
     /// <summary>
@@ -517,6 +573,18 @@ public class Core : Game
 
         // Update the audio controller.
         Audio.Update();
+
+        // Update the camera system
+        if (Camera != null)
+        {
+            Camera.Update();
+        }
+        
+        // Update the camera controller for input handling
+        if (CameraController != null)
+        {
+            CameraController.Update(gameTime);
+        }
 
         if (ExitOnEscape && Input.Keyboard.WasKeyJustPressed(Keys.Escape))
         {

@@ -121,29 +121,56 @@ public abstract class Scene : IDisposable
     }
 
     /// <summary>
-    /// Helper method to begin SpriteBatch with automatic content scaling
+    /// Helper method to begin SpriteBatch with automatic content scaling and optional camera transformation
     /// </summary>
     /// <param name="sortMode">Sprite sorting mode</param>
     /// <param name="blendState">Blend state</param>
     /// <param name="samplerState">Sampler state</param>
     /// <param name="depthStencilState">Depth stencil state</param>
     /// <param name="rasterizerState">Rasterizer state</param>
+    /// <param name="useCamera">Whether to apply camera transformation (default: true)</param>
     /// <param name="useScaling">Whether to apply content scaling (default: true)</param>
     protected void BeginScaled(SpriteSortMode sortMode = SpriteSortMode.Deferred,
                               BlendState blendState = null,
                               SamplerState samplerState = null, 
                               DepthStencilState depthStencilState = null,
                               RasterizerState rasterizerState = null,
+                              bool useCamera = true,
                               bool useScaling = true)
     {
-        if (useScaling)
+        Matrix transformMatrix;
+        
+        if (useScaling && useCamera)
         {
-            Core.SpriteBatch.Begin(sortMode, blendState, samplerState, depthStencilState, rasterizerState, null, Core.ScaleMatrix);
+            transformMatrix = Core.CameraMatrix;
+        }
+        else if (useScaling && !useCamera)
+        {
+            transformMatrix = Core.ScaleMatrix;
         }
         else
         {
-            Core.SpriteBatch.Begin(sortMode, blendState, samplerState, depthStencilState, rasterizerState);
+            transformMatrix = Matrix.Identity;
         }
+        
+        Core.SpriteBatch.Begin(sortMode, blendState, samplerState, depthStencilState, rasterizerState, null, transformMatrix);
+    }
+
+    /// <summary>
+    /// Helper method to begin SpriteBatch for UI rendering (no camera transformation, only content scaling)
+    /// </summary>
+    /// <param name="sortMode">Sprite sorting mode</param>
+    /// <param name="blendState">Blend state</param>
+    /// <param name="samplerState">Sampler state</param>
+    /// <param name="depthStencilState">Depth stencil state</param>
+    /// <param name="rasterizerState">Rasterizer state</param>
+    protected void BeginScaledUI(SpriteSortMode sortMode = SpriteSortMode.Deferred,
+                                 BlendState blendState = null,
+                                 SamplerState samplerState = null, 
+                                 DepthStencilState depthStencilState = null,
+                                 RasterizerState rasterizerState = null)
+    {
+        BeginScaled(sortMode, blendState, samplerState, depthStencilState, rasterizerState, useCamera: false, useScaling: true);
     }
 
     /// <summary>

@@ -40,6 +40,21 @@ public class MouseInfo
     public float VirtualY => VirtualPosition.Y;
 
     /// <summary>
+    /// Gets the current position of the mouse cursor in world coordinates (includes camera transformation).
+    /// </summary>
+    public Vector2 WorldPosition => Core.ScreenToWorld(Position.ToVector2());
+
+    /// <summary>
+    /// Gets the current x-coordinate position of the mouse cursor in world coordinates.
+    /// </summary>
+    public float WorldX => WorldPosition.X;
+
+    /// <summary>
+    /// Gets the current y-coordinate position of the mouse cursor in world coordinates.
+    /// </summary>
+    public float WorldY => WorldPosition.Y;
+
+    /// <summary>
     /// Gets or Sets the current x-coordinate position of the mouse cursor in screen space.
     /// </summary>
     public int X
