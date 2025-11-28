@@ -31,8 +31,9 @@ Core.Content      // Global content manager
 Explore detailed documentation for each namespace:
 
 ### 🎨 [Graphics](MonoGameLibrary/Graphics/README.md)
-Comprehensive 2D graphics system with sprites, animations, texture atlases, tile-based rendering, and collision detection.
+Comprehensive 2D graphics system with sprites, animations, texture atlases, tile-based rendering, collision detection, and professional camera system.
 - **Classes**: TextureAtlas, Sprite, AnimatedSprite, CharacterSprite, PlayerSprite, NPCSprite
+- **Camera**: [Camera System](MonoGameLibrary/Graphics/Camera/README.md) - Professional 2D camera with zoom, following, and multi-input controls
 - **Tiles**: [Tilemap System](MonoGameLibrary/Graphics/Tiles/README.md) - JSON-based tilemaps with z-ordering and object layer collision support
 - **Collision**: [Collision System](MonoGameLibrary/Graphics/Collision/README.md) - Rectangle/circle collision detection with visualization
 - **Features**: XML/JSON configuration, animation state management, directional sprites, professional tilemap rendering, multi-shape object layer collision
@@ -291,13 +292,19 @@ Add the MonoGame Library project to your solution and reference it from your gam
 Track the evolution of MonoGame Library through our detailed release notes:
 
 ### Current Version
-- **[Version 1.0.20](releases/ReleaseNotes-1.0.20.md)** *(Latest)* - Content Scaling System & Steam Deck Support
+- **[Version 1.0.21](releases/ReleaseNotes-1.0.21.md)** *(Latest)* - Comprehensive 2D Camera System
+  - Professional camera architecture with position, zoom, rotation, and smooth following
+  - Configurable character screen coverage system (adjustable percentage, default 10%)
+  - Multi-input controls: keyboard, gamepad, and mouse wheel with customizable bindings
+  - Performance monitoring, diagnostic tools, and world coordinate input integration
+  - Complete documentation with troubleshooting guide and migration examples
+
+### Previous Releases
+- **[Version 1.0.20](releases/ReleaseNotes-1.0.20.md)** - Content Scaling System & Steam Deck Support
   - Comprehensive virtual resolution system with automatic scaling and letterboxing
   - Steam Deck auto-detection with native resolution and fullscreen optimization
   - Monitor resolution awareness with intelligent window sizing
   - Enhanced input system with virtual coordinate transformation
-
-### Previous Releases
 - **[Version 1.0.19](releases/ReleaseNotes-1.0.19.md)** - Developer Mode & Enhanced Object Layer Support
   - F1/F2 hotkey developer mode with collision visualization  
   - Enhanced object layer support with objectType property
