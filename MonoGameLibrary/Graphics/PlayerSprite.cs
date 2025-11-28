@@ -19,6 +19,7 @@ public class PlayerSprite : CharacterSprite
     private bool _isMoving = false;
     private Tilemap _currentTilemap;
     private Vector2 _tilemapPosition = Vector2.Zero;
+    private string _collisionLayerName = "Collision_Static";
 
     /// <summary>
     /// Gets or sets the movement speed in pixels per second
@@ -42,6 +43,16 @@ public class PlayerSprite : CharacterSprite
     /// Gets whether the player is currently moving
     /// </summary>
     public bool IsMoving => _isMoving;
+
+    /// <summary>
+    /// Gets or sets the name of the collision layer to check against.
+    /// Default is "Collision_Static".
+    /// </summary>
+    public string CollisionLayerName
+    {
+        get => _collisionLayerName;
+        set => _collisionLayerName = value ?? "Collision_Static";
+    }
 
     /// <summary>
     /// Gets or sets the current tilemap for collision detection
@@ -208,8 +219,8 @@ public class PlayerSprite : CharacterSprite
         if (Collision == null)
             return true;
 
-        // Check collision against the Collision_Static layer
-        return !_currentTilemap.CheckCharacterSpriteCollision(this, newPosition, "Collision_Static", _tilemapPosition);
+        // Check collision against the specified object layer
+        return !_currentTilemap.CheckCharacterSpriteObjectCollision(this, newPosition, _collisionLayerName, _tilemapPosition);
     }
 
     /// <summary>

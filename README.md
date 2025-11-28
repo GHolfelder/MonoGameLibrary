@@ -31,10 +31,11 @@ Core.Content      // Global content manager
 Explore detailed documentation for each namespace:
 
 ### 🎨 [Graphics](MonoGameLibrary/Graphics/README.md)
-Comprehensive 2D graphics system with sprites, animations, texture atlases, and tile-based rendering.
+Comprehensive 2D graphics system with sprites, animations, texture atlases, tile-based rendering, and collision detection.
 - **Classes**: TextureAtlas, Sprite, AnimatedSprite, CharacterSprite, PlayerSprite, NPCSprite
-- **Tiles**: [Tilemap System](MonoGameLibrary/Graphics/Tiles/README.md) - JSON-based tilemaps with z-ordering support
-- **Features**: XML/JSON configuration, animation state management, directional sprites, professional tilemap rendering
+- **Tiles**: [Tilemap System](MonoGameLibrary/Graphics/Tiles/README.md) - JSON-based tilemaps with z-ordering and object layer collision support
+- **Collision**: [Collision System](MonoGameLibrary/Graphics/Collision/README.md) - Rectangle/circle collision detection with visualization
+- **Features**: XML/JSON configuration, animation state management, directional sprites, professional tilemap rendering, multi-shape object layer collision
 
 ### 🎮 [Input](MonoGameLibrary/Input/README.md)
 Unified input management with edge detection and multi-device support.
@@ -63,8 +64,50 @@ Common utilities, logging system, and helper classes.
 
 ## Featured Systems
 
-### 🗺️ JSON Tilemap System with Z-Ordering
-Professional tilemap rendering with proper depth management for characters and entities:
+### 🖥️ Resolution-Independent Content Scaling
+Automatic content scaling system for consistent visual experience across all screen resolutions:
+
+```csharp
+// Scene-based automatic scaling
+public class GameScene : Scene
+{
+    protected override void Draw(GameTime gameTime)
+    {
+        BeginScaled(); // Automatic scaling with letterboxing/pillarboxing
+        {
+            // All coordinates use virtual resolution (default 1920x1080)
+            player.Draw(Core.SpriteBatch, playerPosition);
+            tilemap.Draw(Core.SpriteBatch, Vector2.Zero);
+            
+            // UI positioned in virtual coordinates
+            Core.SpriteBatch.DrawString(font, "Score: 1000", new Vector2(50, 50), Color.White);
+        }
+        Core.SpriteBatch.End();
+    }
+}
+
+// Manual scaling for non-Scene classes
+Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
+// Drawing code here uses virtual coordinates
+Core.SpriteBatch.End();
+
+// Input automatically converted to virtual coordinates
+var mousePos = Core.Input.Mouse.VirtualPosition;
+var virtualClick = Core.Input.Mouse.VirtualX; // Always in virtual space
+```
+
+**Key Features:**
+- **Virtual Resolution System** - Design for fixed resolution (default 1920x1080)
+- **Uniform Scaling** - Maintains aspect ratio with letterbox/pillarbox when needed
+- **Input Transformation** - Mouse coordinates automatically converted to virtual space
+- **Scene Integration** - `BeginScaled()` method for automatic scaling in Scene classes
+- **Monitor Awareness** - Automatic window sizing based on monitor resolution
+- **Cross-Resolution Consistency** - Same visual experience from 1366x768 to 4K displays
+
+📖 **[Complete Content Scaling Documentation](ContentScalingExample.md)**
+
+### 🗺️ JSON Tilemap System with Z-Ordering & Collision
+Professional tilemap rendering with proper depth management and comprehensive collision detection:
 
 ```csharp
 // Load tilemap from JSON with texture atlas integration
@@ -74,16 +117,59 @@ Tilemap tilemap = Tilemap.FromJson(Content, "maps/level1.json");
 tilemap.DrawLayersUpTo(spriteBatch, position, 0);    // Background
 player.Draw(spriteBatch);                           // Characters  
 tilemap.DrawLayersFrom(spriteBatch, position, 1);   // Foreground
+
+// Multi-shape object layer collision detection
+if (tilemap.CheckSpriteObjectCollision(player, playerPos, "Collision"))
+{
+    // Handle collision with walls, triggers, or interactive objects
+}
+
+// Visualize collision objects (rectangles, circles, polygons)
+tilemap.DrawObjectLayerAsCollision(spriteBatch, "Collision", Color.Red);
 ```
 
 **Key Features:**
 - **Multi-layer support** for professional depth rendering
 - **Texture atlas integration** for optimal performance  
 - **Z-ordering system** - characters appear behind walls and trees
+- **Multi-shape object layers** - rectangles, circles, ellipses, polygons, and points
+- **Collision detection** - sprite-to-object and character-to-object collision
+- **Collision visualization** - debug rendering for all object shapes
 - **JSON configuration** with tileset references to atlas sprites
 - **Per-scene tilemaps** for different game areas
 
 📖 **[Complete Tilemap Documentation](MonoGameLibrary/Graphics/Tiles/README.md)**
+📖 **[Collision System Documentation](MonoGameLibrary/Graphics/Collision/README.md)**
+
+### 🎯 Comprehensive Collision Detection
+Flexible collision system supporting multiple shape types and automatic visualization:
+
+```csharp
+// Enable sprite collision
+player.EnableCollision(32, 32, enableDraw: true, Color.Green);
+enemy.EnableCollision(16f, enableDraw: true, Color.Red); // Circular
+
+// Check sprite-to-sprite collision
+if (player.CheckCollision(playerPos, enemy, enemyPos))
+{
+    // Handle collision between sprites
+}
+
+// Object layer collision with multiple shapes
+var objectLayer = tilemap.GetObjectLayer("Interactive");
+foreach (var obj in objectLayer.Objects)
+{
+    // Supports rectangles, circles, ellipses, polygons, points
+    // Automatic shape detection from JSON properties
+}
+```
+
+**Supported Object Shapes:**
+- **Rectangle**: Standard collision boxes for walls and platforms
+- **Circle/Ellipse**: Curved collision areas for rounded objects
+- **Polygon**: Complex shapes for irregular collision boundaries  
+- **Point**: Precise trigger points for events or spawns
+- **Visualization**: Debug rendering for all collision shapes
 
 ## Quick Start
 
@@ -199,6 +285,32 @@ Add the MonoGame Library project to your solution and reference it from your gam
 ```xml
 <ProjectReference Include="..\MonoGameLibrary\MonoGameLibrary.csproj" />
 ```
+
+## Release Notes
+
+Track the evolution of MonoGame Library through our detailed release notes:
+
+### Current Version
+- **[Version 1.0.20](releases/ReleaseNotes-1.0.20.md)** *(Latest)* - Content Scaling System & Steam Deck Support
+  - Comprehensive virtual resolution system with automatic scaling and letterboxing
+  - Steam Deck auto-detection with native resolution and fullscreen optimization
+  - Monitor resolution awareness with intelligent window sizing
+  - Enhanced input system with virtual coordinate transformation
+
+### Previous Releases
+- **[Version 1.0.19](releases/ReleaseNotes-1.0.19.md)** - Developer Mode & Enhanced Object Layer Support
+  - F1/F2 hotkey developer mode with collision visualization  
+  - Enhanced object layer support with objectType property
+  - Advanced polyline collision detection with geometric precision
+  - PlayerSprite object layer integration
+- **Version 1.0.18** - Enhanced Tilemap System & Multi-Shape Collision Support
+- **Version 1.0.17** - Improved Graphics Pipeline & Animation System  
+- **Version 1.0.16** - Core Architecture Improvements
+- **Earlier Versions** - Foundation development and initial feature set
+
+📖 **[View All Release Notes](releases/)** - Complete changelog and version history
+
+**Stay Updated**: Release notes document all new features, API changes, bug fixes, and upgrade instructions for each version.
 
 ## Requirements
 

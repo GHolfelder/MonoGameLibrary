@@ -167,9 +167,18 @@ public class Sprite
     {
         Region.Draw(spriteBatch, position, Color, Rotation, Origin, Scale, Effects, LayerDepth);
         
-        if (showCollision && Collision != null)
+        // Show collision if requested OR if global developer mode is active
+        if ((showCollision || Core.ShowCollisionBoxes) && Collision != null)
         {
-            Collision.Draw(spriteBatch, position);
+            // Call the collision shape directly to bypass EnableDraw check when in developer mode
+            if (Core.ShowCollisionBoxes)
+            {
+                Collision.Shape.Draw(spriteBatch, position, Collision.DrawColor);
+            }
+            else
+            {
+                Collision.Draw(spriteBatch, position);
+            }
         }
     }
 
