@@ -22,6 +22,11 @@ The Graphics namespace provides comprehensive 2D graphics functionality for Mono
 - **[Tilemap](Tiles/Tilemap.cs)** - Arranges tiles from a tileset into game levels with XML configuration support
 - **[Tileset](Tiles/Tileset.cs)** - Manages collections of tiles from texture atlases
 
+### Camera System
+- **[Camera2D](Camera/Camera2D.cs)** - Professional 2D camera with position, zoom, rotation, and smooth following capabilities
+- **[CameraController](Camera/CameraController.cs)** - Multi-input camera controls (keyboard, gamepad, mouse wheel) with customizable bindings
+- **[Camera Documentation](Camera/README.md)** - Comprehensive guide with examples, troubleshooting, and best practices
+
 ### Animation System
 - **[AnimationState](AnimationState.cs)** - String constants for common animation states (idle, walk, run, attack, etc.)
 - **[IAnimationResolver](IAnimationResolver.cs)** - Interface for loading animations from different sources
@@ -33,6 +38,13 @@ The Graphics namespace provides comprehensive 2D graphics functionality for Mono
 - **XML Configuration**: Load texture atlases and tilemaps from XML files
 - **JSON Configuration**: Alternative JSON format for texture atlases and animations
 - **Flexible Loading**: Support for combined or separate texture/animation files
+
+### Camera System
+- **Configurable character screen coverage** with intelligent zoom limits based on character size
+- **Multi-input controls** supporting keyboard, gamepad, and mouse wheel with customizable key bindings
+- **Smooth camera following** with interpolated movement and configurable follow speed
+- **Performance monitoring** with matrix calculation tracking and diagnostic tools
+- **World coordinate integration** for camera-aware input and rendering
 
 ### Animation System
 - **Frame-based animations** with configurable timing
@@ -86,6 +98,26 @@ using MonoGameLibrary.Graphics.Tiles;
 
 var tilemap = Tilemap.FromXml(content, "level1.xml");
 tilemap.Draw(spriteBatch);
+```
+
+### Camera System Usage
+```csharp
+// Import the Camera namespace
+using MonoGameLibrary.Graphics.Camera;
+
+// Configure camera for character (handles scaled sprites)
+float effectiveSize = player.FrameSize.Y * player.Scale.Y;
+Core.Camera.SetCharacterScreenCoverage(0.1f, effectiveSize); // 10% screen coverage
+
+// Enable smooth following
+Core.Camera.SmoothFollowing = true;
+Core.Camera.FollowSpeed = 5.0f;
+
+// Camera-aware rendering
+BeginScaled(useCamera: true);
+tilemap.Draw(Core.SpriteBatch, Vector2.Zero);
+player.Draw(Core.SpriteBatch);
+Core.SpriteBatch.End();
 ```
 
 ## Configuration Examples

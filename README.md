@@ -30,6 +30,12 @@ Core.Content      // Global content manager
 
 Explore detailed documentation for each namespace:
 
+### 🏗️ Core System
+Foundation classes and core game architecture providing the singleton pattern and essential utilities.
+- **Classes**: Core (Game singleton), Circle (geometric shape utility), CameraTestScene (camera demo)
+- **Features**: Centralized system access, content scaling integration, camera system coordination
+- **Pattern**: Static property access to all subsystems (`Core.Graphics`, `Core.Input`, `Core.Audio`, etc.)
+
 ### 🎨 [Graphics](MonoGameLibrary/Graphics/README.md)
 Comprehensive 2D graphics system with sprites, animations, texture atlases, tile-based rendering, collision detection, and professional camera system.
 - **Classes**: TextureAtlas, Sprite, AnimatedSprite, CharacterSprite, PlayerSprite, NPCSprite
