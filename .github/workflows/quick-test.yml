@@ -58,7 +58,7 @@ jobs:
       
     - name: Upload coverage reports
       if: ${{ github.event.inputs.collect_coverage == 'true' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: coverage-report
         path: ./coverage/**/*
