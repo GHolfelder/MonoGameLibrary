@@ -202,7 +202,7 @@ jobs:
         echo "- **Dependencies**: MonoGame.Framework.DesktopGL, System.Text.Json" >> release_notes.md
         
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         name: Release ${{ needs.package.outputs.full-version }}
         tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', needs.package.outputs.full-version) || github.ref_name }}
