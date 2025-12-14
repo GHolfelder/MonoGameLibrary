@@ -10,6 +10,84 @@ using Microsoft.Xna.Framework.Graphics;
 namespace MonoGameLibrary.Graphics.Tiles;
 
 /// <summary>
+/// Represents a single frame of a tile animation.
+/// </summary>
+public class AnimatedTileFrame
+{
+    public int TileId { get; set; }
+    public int Duration { get; set; }  // Duration in milliseconds
+    public int SourceX { get; set; }
+    public int SourceY { get; set; }
+    public int SourceWidth { get; set; }
+    public int SourceHeight { get; set; }
+}
+
+/// <summary>
+/// Represents an animated tile with its animation frames.
+/// </summary>
+public class AnimatedTile
+{
+    public int Id { get; set; }
+    public string Type { get; set; }
+    public string AtlasSprite { get; set; }
+    public List<AnimatedTileFrame> Animation { get; set; } = new();
+    public object[] CollisionObjects { get; set; }
+    public Dictionary<string, object> Properties { get; set; } = new();
+}
+
+/// <summary>
+/// Manages animation state for an animated tile instance.
+/// </summary>
+public class AnimatedTileInstance
+{
+    private readonly AnimatedTile _animatedTile;
+    private readonly TextureRegion _atlasRegion;
+    private int _currentFrame;
+    private TimeSpan _elapsed;
+
+    public AnimatedTileInstance(AnimatedTile animatedTile, TextureRegion atlasRegion)
+    {
+        _animatedTile = animatedTile;
+        _atlasRegion = atlasRegion;
+        _currentFrame = 0;
+        _elapsed = TimeSpan.Zero;
+    }
+
+    public void Update(GameTime gameTime)
+    {
+        if (_animatedTile.Animation.Count < 2) return; // Need at least 2 frames for animation
+
+        _elapsed += gameTime.ElapsedGameTime;
+        
+        var currentAnimationFrame = _animatedTile.Animation[_currentFrame];
+        var frameDuration = TimeSpan.FromMilliseconds(currentAnimationFrame.Duration);
+        
+        if (_elapsed >= frameDuration)
+        {
+            _elapsed -= frameDuration;
+            _currentFrame = (_currentFrame + 1) % _animatedTile.Animation.Count;
+        }
+    }
+
+    public Rectangle GetCurrentSourceRectangle()
+    {
+        if (_animatedTile.Animation.Count == 0)
+            return _atlasRegion.SourceRectangle; // Fallback to first tile
+            
+        var frame = _animatedTile.Animation[_currentFrame];
+        
+        // Use animation frame coordinates relative to the atlas region
+        return new Rectangle(
+            _atlasRegion.SourceRectangle.X + frame.SourceX, 
+            _atlasRegion.SourceRectangle.Y + frame.SourceY, 
+            frame.SourceWidth, 
+            frame.SourceHeight);
+    }
+
+    public Texture2D Texture => _atlasRegion.Texture;
+}
+
+/// <summary>
 /// Represents a single tile layer in a tilemap.
 /// </summary>
 public class TileLayer
@@ -40,7 +118,7 @@ public class TilesetDefinition
     public int Margin { get; set; }
     public int Spacing { get; set; }
     public string AtlasSprite { get; set; }
-    public object[] Tiles { get; set; } = Array.Empty<object>();
+    public List<AnimatedTile> Tiles { get; set; } = new();
     public Dictionary<string, object> Properties { get; set; } = new();
 }
 
@@ -108,6 +186,8 @@ public class Tilemap
     private readonly Dictionary<int, ITileset> _tilesets;
     private readonly TextureAtlas _textureAtlas;
     private readonly List<ObjectLayer> _objectLayers;
+    private readonly Dictionary<int, AnimatedTile> _animatedTiles; // GID -> AnimatedTile
+    private readonly Dictionary<string, Dictionary<int, AnimatedTileInstance>> _animatedTileInstances; // LayerName -> (TileIndex -> Instance)
 
     /// <summary>
     /// Gets the map name.
@@ -192,6 +272,8 @@ public class Tilemap
         _tilesetDefinitions = new List<TilesetDefinition>();
         _tilesets = new Dictionary<int, ITileset>();
         _objectLayers = new List<ObjectLayer>();
+        _animatedTiles = new Dictionary<int, AnimatedTile>();
+        _animatedTileInstances = new Dictionary<string, Dictionary<int, AnimatedTileInstance>>();
     }
 
     /// <summary>
@@ -287,6 +369,62 @@ public class Tilemap
             AtlasSprite = tilesetElement.GetProperty("atlasSprite").GetString()
         };
 
+        // Parse tiles array for animated tiles
+        if (tilesetElement.TryGetProperty("tiles", out JsonElement tilesElement))
+        {
+            foreach (JsonElement tileElement in tilesElement.EnumerateArray())
+            {
+                var animatedTile = new AnimatedTile();
+                
+                if (tileElement.TryGetProperty("id", out JsonElement idElement))
+                    animatedTile.Id = idElement.GetInt32();
+                    
+                if (tileElement.TryGetProperty("type", out JsonElement typeElement))
+                    animatedTile.Type = typeElement.GetString();
+                    
+                if (tileElement.TryGetProperty("atlasSprite", out JsonElement atlasSpriteElement))
+                    animatedTile.AtlasSprite = atlasSpriteElement.GetString();
+                
+                // Parse animation frames
+                if (tileElement.TryGetProperty("animation", out JsonElement animationElement))
+                {
+                    foreach (JsonElement frameElement in animationElement.EnumerateArray())
+                    {
+                        var frame = new AnimatedTileFrame();
+                        
+                        if (frameElement.TryGetProperty("tileId", out JsonElement tileIdElement))
+                            frame.TileId = tileIdElement.GetInt32();
+                            
+                        if (frameElement.TryGetProperty("duration", out JsonElement durationElement))
+                            frame.Duration = durationElement.GetInt32();
+                            
+                        if (frameElement.TryGetProperty("sourceX", out JsonElement sourceXElement))
+                            frame.SourceX = sourceXElement.GetInt32();
+                            
+                        if (frameElement.TryGetProperty("sourceY", out JsonElement sourceYElement))
+                            frame.SourceY = sourceYElement.GetInt32();
+                            
+                        if (frameElement.TryGetProperty("sourceWidth", out JsonElement sourceWidthElement))
+                            frame.SourceWidth = sourceWidthElement.GetInt32();
+                            
+                        if (frameElement.TryGetProperty("sourceHeight", out JsonElement sourceHeightElement))
+                            frame.SourceHeight = sourceHeightElement.GetInt32();
+                        
+                        animatedTile.Animation.Add(frame);
+                    }
+                    
+                    // Only register animated tiles that have multiple frames
+                    if (animatedTile.Animation.Count >= 2)
+                    {
+                        int globalGid = tilesetDef.FirstGid + animatedTile.Id;
+                        _animatedTiles[globalGid] = animatedTile;
+                    }
+                }
+                
+                tilesetDef.Tiles.Add(animatedTile);
+            }
+        }
+
         _tilesetDefinitions.Add(tilesetDef);
 
         // Create tileset from atlas sprite
@@ -330,6 +468,9 @@ public class Tilemap
         {
             layer.Tiles[index++] = tileElement.GetInt32();
         }
+
+        // Create animated tile instances for this layer
+        CreateAnimatedTileInstances(layer);
 
         _tileLayers.Add(layer);
     }
@@ -519,6 +660,62 @@ public class Tilemap
     }
 
     /// <summary>
+    /// Creates animated tile instances for a layer that contains animated tiles.
+    /// </summary>
+    /// <param name="layer">The tile layer to process.</param>
+    private void CreateAnimatedTileInstances(TileLayer layer)
+    {
+        var instances = new Dictionary<int, AnimatedTileInstance>(); // tile index -> instance
+        
+        for (int i = 0; i < layer.Tiles.Length; i++)
+        {
+            int gid = layer.Tiles[i];
+            if (gid == 0) continue; // Empty tile
+            
+            if (_animatedTiles.TryGetValue(gid, out AnimatedTile animatedTile))
+            {
+                // Find the tileset definition to get the atlas sprite
+                TilesetDefinition tilesetDef = null;
+                foreach (var def in _tilesetDefinitions)
+                {
+                    if (def.FirstGid <= gid && (tilesetDef == null || def.FirstGid > tilesetDef.FirstGid))
+                    {
+                        tilesetDef = def;
+                    }
+                }
+                
+                if (tilesetDef != null)
+                {
+                    // Use the entire tileset atlas region as the base for animation coordinates
+                    var atlasRegion = _textureAtlas.GetRegion(tilesetDef.AtlasSprite);
+                    var instance = new AnimatedTileInstance(animatedTile, atlasRegion);
+                    instances[i] = instance;
+                }
+            }
+        }
+        
+        if (instances.Count > 0)
+        {
+            _animatedTileInstances[layer.Name] = instances;
+        }
+    }
+
+    /// <summary>
+    /// Updates all animated tiles in the tilemap.
+    /// </summary>
+    /// <param name="gameTime">Snapshot of the game timing values.</param>
+    public void Update(GameTime gameTime)
+    {
+        foreach (var layerInstances in _animatedTileInstances.Values)
+        {
+            foreach (var instance in layerInstances.Values)
+            {
+                instance.Update(gameTime);
+            }
+        }
+    }
+
+    /// <summary>
     /// Draws the entire tilemap with proper layer ordering (back to front).
     /// </summary>
     /// <param name="spriteBatch">The sprite batch to draw with.</param>
@@ -543,6 +740,9 @@ public class Tilemap
     {
         Vector2 layerOffset = new Vector2(layer.OffsetX, layer.OffsetY);
         Color layerColor = Color.White * layer.Opacity;
+        
+        // Get animated tile instances for this layer
+        _animatedTileInstances.TryGetValue(layer.Name, out Dictionary<int, AnimatedTileInstance> animatedInstances);
 
         for (int y = 0; y < layer.Height; y++)
         {
@@ -554,14 +754,28 @@ public class Tilemap
                 int gid = layer.Tiles[tileIndex];
                 if (gid == 0) continue; // Empty tile
 
-                var (tileset, localIndex) = GetTilesetForGid(gid);
-                if (tileset == null) continue;
-
-                TextureRegion tileRegion = tileset.GetTile(localIndex);
                 Vector2 tilePosition = position + layerOffset + new Vector2(x * DrawTileWidth, y * DrawTileHeight);
 
-                spriteBatch.Draw(tileRegion.Texture, tilePosition, tileRegion.SourceRectangle, layerColor, 
-                    0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+                // Check if this specific tile position has an animated instance
+                if (animatedInstances != null && animatedInstances.TryGetValue(tileIndex, out AnimatedTileInstance animatedInstance))
+                {
+                    // Draw animated tile
+                    var animatedSourceRect = animatedInstance.GetCurrentSourceRectangle();
+                    
+                    spriteBatch.Draw(animatedInstance.Texture, tilePosition, animatedSourceRect, layerColor,
+                        0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+                }
+                else
+                {
+                    // Draw regular tile
+                    var (tileset, localIndex) = GetTilesetForGid(gid);
+                    if (tileset == null) continue;
+
+                    TextureRegion tileRegion = tileset.GetTile(localIndex);
+                    
+                    spriteBatch.Draw(tileRegion.Texture, tilePosition, tileRegion.SourceRectangle, layerColor, 
+                        0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+                }
             }
         }
     }

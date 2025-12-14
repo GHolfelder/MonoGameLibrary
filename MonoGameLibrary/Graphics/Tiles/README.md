@@ -1,6 +1,6 @@
 # Graphics.Tiles Namespace
 
-The `MonoGameLibrary.Graphics.Tiles` namespace provides comprehensive tilemap and tileset functionality for 2D games, with support for both traditional XML workflows and modern JSON-based texture atlas integration.
+The `MonoGameLibrary.Graphics.Tiles` namespace provides comprehensive tilemap and tileset functionality for 2D games, with support for both traditional XML workflows and modern JSON-based texture atlas integration. This includes automatic support for animated tiles that require no changes to existing game code.
 
 ## Core Classes
 
@@ -11,6 +11,7 @@ The main tilemap class supporting multiple rendering approaches:
 - **Multi-layer support** for professional z-ordering
 - **Proper depth rendering** for characters behind walls/trees
 - **Layer management** with visibility and opacity controls
+- **Animated tile support** with automatic frame cycling
 
 ### Tileset & SpacedTileset
 Tileset implementations supporting various layout formats:
@@ -26,10 +27,17 @@ Represents individual tile layers with:
 - Tile data arrays with global ID references
 - Custom properties and metadata support
 
+### Animated Tiles
+Automatic animation system for tile animations:
+
+- **AnimatedTile**: Defines tiles with animation frames
+- **AnimatedTileFrame**: Individual animation frames with timing
+- **AnimatedTileInstance**: Manages animation state per tile instance
+
 ## Supported Formats
 
 ### JSON Tilemap Format
-Modern approach using texture atlases:
+Modern approach using texture atlases with animated tile support:
 
 ```json
 {
@@ -49,7 +57,32 @@ Modern approach using texture atlases:
       "tileHeight": 32,
       "columns": 4,
       "spacing": 0,
-      "margin": 0
+      "margin": 0,
+      "tiles": [
+        {
+          "id": 0,
+          "type": null,
+          "atlasSprite": null,
+          "animation": [
+            {
+              "tileId": 0,
+              "duration": 100,
+              "sourceX": 0,
+              "sourceY": 0,
+              "sourceWidth": 32,
+              "sourceHeight": 32
+            },
+            {
+              "tileId": 1,
+              "duration": 100,
+              "sourceX": 32,
+              "sourceY": 0,
+              "sourceWidth": 32,
+              "sourceHeight": 32
+            }
+          ]
+        }
+      ]
     }
   ],
   "tileLayers": [
@@ -66,8 +99,43 @@ Modern approach using texture atlases:
 #### Texture Atlas Integration
 - **Single texture**: All tiles from packed atlas for optimal performance
 - **Sprite references**: Tilesets reference named sprites via `atlasSprite`
-- **Static tile focus**: Optimized for static tile rendering without animation overhead
+- **Automatic animation**: Animated tiles are processed automatically without game code changes
 - **Automatic lookup**: Seamless integration with TextureAtlas texture regions
+
+#### Animated Tiles
+- **Frame-based animation**: Define animation sequences with custom frame durations
+- **Automatic cycling**: Tiles animate automatically when Update() is called on the tilemap
+- **Per-tile animation**: Each animated tile instance tracks its own animation state
+- **Zero-overhead for static tiles**: Regular tiles have no animation performance cost
+
+#### Animation JSON Format
+```json
+{
+  "tiles": [
+    {
+      "id": 0,
+      "animation": [
+        {
+          "tileId": 0,
+          "duration": 100,
+          "sourceX": 0,
+          "sourceY": 0,
+          "sourceWidth": 32,
+          "sourceHeight": 32
+        },
+        {
+          "tileId": 1,
+          "duration": 150,
+          "sourceX": 32,
+          "sourceY": 0,
+          "sourceWidth": 32,
+          "sourceHeight": 32
+        }
+      ]
+    }
+  ]
+}
+```
 
 #### Multi-Layer Z-Ordering
 - **Layer-based rendering**: Multiple tile layers in proper depth order
@@ -90,9 +158,32 @@ TextureAtlas gameAtlas = TextureAtlas.FromJsonTexture(Content, "atlas.json");
 Tilemap backgroundMap = Tilemap.FromJson(Content, "maps/background.json", gameAtlas);
 Tilemap foregroundMap = Tilemap.FromJson(Content, "maps/foreground.json", gameAtlas);
 
+// In your Update loop - required for animated tiles
+backgroundMap.Update(gameTime);
+foregroundMap.Update(gameTime);
+
 // All tilemaps share one texture - optimal performance!
 backgroundMap.Draw(spriteBatch, Vector2.Zero);
 foregroundMap.Draw(spriteBatch, Vector2.Zero);
+```
+
+### Animated Tiles Usage
+```csharp
+// Simply call Update() in your game loop - animations work automatically
+public override void Update(GameTime gameTime)
+{
+    tilemap.Update(gameTime);  // Handles all animated tiles automatically
+    
+    // Your other game logic here...
+    base.Update(gameTime);
+}
+
+public override void Draw(GameTime gameTime)
+{
+    spriteBatch.Begin();
+    tilemap.Draw(spriteBatch, Vector2.Zero);  // Animated tiles render automatically
+    spriteBatch.End();
+}
 ```
 
 ### Z-Ordering for Character Depth
