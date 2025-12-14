@@ -1,0 +1,102 @@
+{
+  "name": "animated-example",
+  "width": 10,
+  "height": 8,
+  "tileWidth": 32,
+  "tileHeight": 32,
+  "orientation": "orthogonal",
+  "backgroundColor": null,
+  "tilesets": [
+    {
+      "name": "animated-grass",
+      "firstGid": 1,
+      "tileWidth": 32,
+      "tileHeight": 32,
+      "tileCount": 10,
+      "columns": 10,
+      "margin": 0,
+      "spacing": 0,
+      "atlasSprite": "level0_animated-grass",
+      "tiles": [
+        {
+          "id": 0,
+          "type": null,
+          "atlasSprite": null,
+          "animation": [
+            {
+              "tileId": 0,
+              "duration": 100,
+              "sourceX": 0,
+              "sourceY": 0,
+              "sourceWidth": 32,
+              "sourceHeight": 32
+            },
+            {
+              "tileId": 1,
+              "duration": 100,
+              "sourceX": 32,
+              "sourceY": 0,
+              "sourceWidth": 32,
+              "sourceHeight": 32
+            },
+            {
+              "tileId": 2,
+              "duration": 100,
+              "sourceX": 64,
+              "sourceY": 0,
+              "sourceWidth": 32,
+              "sourceHeight": 32
+            },
+            {
+              "tileId": 3,
+              "duration": 100,
+              "sourceX": 96,
+              "sourceY": 0,
+              "sourceWidth": 32,
+              "sourceHeight": 32
+            }
+          ],
+          "collisionObjects": null,
+          "properties": {}
+        }
+      ],
+      "properties": {}
+    },
+    {
+      "name": "static-tiles",
+      "firstGid": 11,
+      "tileWidth": 32,
+      "tileHeight": 32,
+      "tileCount": 5,
+      "columns": 5,
+      "margin": 0,
+      "spacing": 0,
+      "atlasSprite": "level0_static-tiles",
+      "tiles": [],
+      "properties": {}
+    }
+  ],
+  "tileLayers": [
+    {
+      "id": 1,
+      "name": "Ground",
+      "width": 10,
+      "height": 8,
+      "opacity": 1.0,
+      "visible": true,
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "tiles": [
+        1, 1, 11, 12, 13, 1, 1, 11, 12, 13,
+        1, 1, 11, 12, 13, 1, 1, 11, 12, 13,
+        14, 15, 1, 1, 1, 14, 15, 1, 1, 1,
+        14, 15, 1, 1, 1, 14, 15, 1, 1, 1,
+        1, 1, 12, 13, 14, 1, 1, 12, 13, 14,
+        1, 1, 12, 13, 14, 1, 1, 12, 13, 14,
+        11, 12, 1, 1, 1, 11, 12, 1, 1, 1,
+        11, 12, 1, 1, 1, 11, 12, 1, 1, 1
+      ]
+    }
+  ],
+  "objectLayers": []
+}
