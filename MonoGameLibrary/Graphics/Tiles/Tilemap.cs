@@ -31,6 +31,16 @@ public class AnimatedTile
     public string Type { get; set; }
     public string AtlasSprite { get; set; }
     public List<AnimatedTileFrame> Animation { get; set; } = new();
+    public Dictionary<string, object> Properties { get; set; } = new();
+}
+
+/// <summary>
+/// Represents tile-specific data (collision objects, properties, etc.)
+/// </summary>
+public class TileData
+{
+    public int Id { get; set; }
+    public string Type { get; set; }
     public object[] CollisionObjects { get; set; }
     public Dictionary<string, object> Properties { get; set; } = new();
 }
@@ -159,9 +169,10 @@ public class CollisionObject
     public float Radius => Width * 0.5f;
     
     /// <summary>
-    /// Gets whether this object is circular (ellipse with equal width and height).
+    /// Gets whether this object is circular (ellipse with approximately equal width and height).
+    /// Allows for small floating point differences.
     /// </summary>
-    public bool IsCircle => ShapeType == CollisionObjectType.Ellipse && Width == Height;
+    public bool IsCircle => ShapeType == CollisionObjectType.Ellipse && Math.Abs(Width - Height) <= 1.0f;
 }
 
 /// <summary>
@@ -186,7 +197,8 @@ public class Tilemap
     private readonly Dictionary<int, ITileset> _tilesets;
     private readonly TextureAtlas _textureAtlas;
     private readonly List<ObjectLayer> _objectLayers;
-    private readonly Dictionary<int, AnimatedTile> _animatedTiles; // GID -> AnimatedTile
+    private readonly Dictionary<int, AnimatedTile> _animatedTiles; // GID -> Animation data (only truly animated tiles)
+    private readonly Dictionary<int, TileData> _tileData; // GID -> Collision/property data
     private readonly Dictionary<string, Dictionary<int, AnimatedTileInstance>> _animatedTileInstances; // LayerName -> (TileIndex -> Instance)
 
     /// <summary>
@@ -273,6 +285,7 @@ public class Tilemap
         _tilesets = new Dictionary<int, ITileset>();
         _objectLayers = new List<ObjectLayer>();
         _animatedTiles = new Dictionary<int, AnimatedTile>();
+        _tileData = new Dictionary<int, TileData>();
         _animatedTileInstances = new Dictionary<string, Dictionary<int, AnimatedTileInstance>>();
     }
 
@@ -386,7 +399,7 @@ public class Tilemap
                     animatedTile.AtlasSprite = atlasSpriteElement.GetString();
                 
                 // Parse animation frames
-                if (tileElement.TryGetProperty("animation", out JsonElement animationElement))
+                if (tileElement.TryGetProperty("animation", out JsonElement animationElement) && animationElement.ValueKind != JsonValueKind.Null)
                 {
                     foreach (JsonElement frameElement in animationElement.EnumerateArray())
                     {
@@ -412,13 +425,121 @@ public class Tilemap
                         
                         animatedTile.Animation.Add(frame);
                     }
+                }
+                
+                // Parse collision objects for this tile
+                if (tileElement.TryGetProperty("collisionObjects", out JsonElement collisionObjectsElement) && collisionObjectsElement.ValueKind != JsonValueKind.Null)
+                {
+                    var collisionObjectsList = new List<object>();
                     
-                    // Only register animated tiles that have multiple frames
-                    if (animatedTile.Animation.Count >= 2)
+                    foreach (JsonElement collisionObjElement in collisionObjectsElement.EnumerateArray())
                     {
-                        int globalGid = tilesetDef.FirstGid + animatedTile.Id;
-                        _animatedTiles[globalGid] = animatedTile;
+                        var collisionObject = new CollisionObject();
+                        
+                        // Parse collision object properties
+                        if (collisionObjElement.TryGetProperty("name", out JsonElement objNameElement))
+                            collisionObject.Name = objNameElement.GetString();
+                        
+                        if (collisionObjElement.TryGetProperty("type", out JsonElement objTypeElement))
+                            collisionObject.Type = objTypeElement.GetString();
+                        
+                        if (collisionObjElement.TryGetProperty("x", out JsonElement xElement))
+                            collisionObject.Position = new Vector2((float)Math.Truncate(xElement.GetSingle()), collisionObject.Position.Y);
+                        
+                        if (collisionObjElement.TryGetProperty("y", out JsonElement yElement))
+                            collisionObject.Position = new Vector2(collisionObject.Position.X, (float)Math.Truncate(yElement.GetSingle()));
+                        
+                        if (collisionObjElement.TryGetProperty("width", out JsonElement widthElement))
+                            collisionObject.Width = (int)Math.Truncate(widthElement.GetSingle());
+                        
+                        if (collisionObjElement.TryGetProperty("height", out JsonElement heightElement))
+                            collisionObject.Height = (int)Math.Truncate(heightElement.GetSingle());
+                        
+                        if (collisionObjElement.TryGetProperty("rotation", out JsonElement rotationElement))
+                            collisionObject.Rotation = rotationElement.GetSingle();
+                        
+                        if (collisionObjElement.TryGetProperty("gid", out JsonElement gidElement))
+                            collisionObject.Gid = gidElement.GetInt32();
+                        
+                        // Determine shape type
+                        if (collisionObjElement.TryGetProperty("objectType", out JsonElement objectTypeElement))
+                        {
+                            string objectType = objectTypeElement.GetString()?.ToLowerInvariant();
+                            collisionObject.ShapeType = objectType switch
+                            {
+                                "rectangle" => CollisionObjectType.Rectangle,
+                                "ellipse" => CollisionObjectType.Ellipse,
+                                "point" => CollisionObjectType.Point,
+                                "polygon" => CollisionObjectType.Polygon,
+                                "polyline" => CollisionObjectType.Polyline,
+                                "tile" => CollisionObjectType.Tile,
+                                "text" => CollisionObjectType.Text,
+                                _ => CollisionObjectType.Rectangle
+                            };
+                        }
+                        else
+                        {
+                            // Legacy shape detection
+                            if (collisionObjElement.TryGetProperty("polygon", out JsonElement polygonElement) && polygonElement.ValueKind == JsonValueKind.Array)
+                            {
+                                collisionObject.ShapeType = CollisionObjectType.Polygon;
+                            }
+                            else if (collisionObjElement.TryGetProperty("polyline", out JsonElement polylineElement) && polylineElement.ValueKind == JsonValueKind.Array)
+                            {
+                                collisionObject.ShapeType = CollisionObjectType.Polyline;
+                            }
+                            else if (collisionObject.Width == 0 && collisionObject.Height == 0)
+                            {
+                                collisionObject.ShapeType = CollisionObjectType.Point;
+                            }
+                            else if (collisionObjElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
+                            {
+                                collisionObject.ShapeType = CollisionObjectType.Ellipse;
+                            }
+                            else
+                            {
+                                collisionObject.ShapeType = CollisionObjectType.Rectangle;
+                            }
+                        }
+                        
+                        // Parse polygon/polyline points
+                        if (collisionObjElement.TryGetProperty("polygon", out JsonElement polygonElement2) && polygonElement2.ValueKind == JsonValueKind.Array)
+                        {
+                            collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement2);
+                        }
+                        else if (collisionObjElement.TryGetProperty("polyline", out JsonElement polylineElement2) && polylineElement2.ValueKind == JsonValueKind.Array)
+                        {
+                            collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement2);
+                        }
+                        
+                        // Parse properties if they exist
+                        if (collisionObjElement.TryGetProperty("properties", out JsonElement propertiesElement))
+                        {
+                            foreach (JsonProperty property in propertiesElement.EnumerateObject())
+                            {
+                                collisionObject.Properties[property.Name] = property.Value.ToString();
+                            }
+                        }
+                        
+                        collisionObjectsList.Add(collisionObject);
                     }
+                    
+                    // Store collision objects separately
+                    int globalGid = tilesetDef.FirstGid + animatedTile.Id;
+                    var tileData = new TileData
+                    {
+                        CollisionObjects = collisionObjectsList.ToArray()
+                    };
+                    _tileData[globalGid] = tileData;
+                }
+                
+                // Register tiles that have animation (multiple frames)
+                bool hasAnimation = animatedTile.Animation.Count >= 2;
+                
+                if (hasAnimation)
+                {
+                    int globalGid = tilesetDef.FirstGid + animatedTile.Id;
+                    _animatedTiles[globalGid] = animatedTile;
                 }
                 
                 tilesetDef.Tiles.Add(animatedTile);
@@ -672,7 +793,9 @@ public class Tilemap
             int gid = layer.Tiles[i];
             if (gid == 0) continue; // Empty tile
             
-            if (_animatedTiles.TryGetValue(gid, out AnimatedTile animatedTile))
+            // Only create instances for truly animated tiles (not tiles with just collision data)
+            if (_animatedTiles.TryGetValue(gid, out AnimatedTile animatedTile) && 
+                animatedTile.Animation.Count >= 2)
             {
                 // Find the tileset definition to get the atlas sprite
                 TilesetDefinition tilesetDef = null;
@@ -852,6 +975,28 @@ public class Tilemap
     public ObjectLayer GetObjectLayerByIndex(int index)
     {
         return index >= 0 && index < _objectLayers.Count ? _objectLayers[index] : null;
+    }
+
+    /// <summary>
+    /// Gets the animated tile definition for a given GID.
+    /// </summary>
+    /// <param name="gid">The global tile ID.</param>
+    /// <param name="animatedTile">The animated tile definition if found.</param>
+    /// <returns>True if an animated tile was found for this GID.</returns>
+    internal bool GetAnimatedTile(int gid, out AnimatedTile animatedTile)
+    {
+        return _animatedTiles.TryGetValue(gid, out animatedTile);
+    }
+
+    /// <summary>
+    /// Gets the tile data for a given GID.
+    /// </summary>
+    /// <param name="gid">The global tile ID.</param>
+    /// <param name="tileData">The tile data if found.</param>
+    /// <returns>True if tile data was found for this GID.</returns>
+    internal bool GetTileData(int gid, out TileData tileData)
+    {
+        return _tileData.TryGetValue(gid, out tileData);
     }
 
     /// <summary>
