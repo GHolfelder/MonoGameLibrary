@@ -298,14 +298,21 @@ Add the MonoGame Library project to your solution and reference it from your gam
 Track the evolution of MonoGame Library through our detailed release notes:
 
 ### Current Version
-- **[Version 1.0.21](releases/ReleaseNotes-1.0.21.md)** *(Latest)* - Comprehensive 2D Camera System
+- **[Version 1.0.22](releases/ReleaseNotes-1.0.22.md)** *(Latest)* - Enhanced Tilemap System & Animation Improvements
+  - **Improved Animation Performance**: Optimized animated tile instance management with per-layer tracking
+  - **Enhanced JSON Parsing**: Better collision object parsing with robust shape type detection
+  - **Collision Object Enhancements**: Added support for text objects and improved property handling
+  - **Animation State Management**: More efficient animation frame cycling with proper timing controls
+  - **Object Layer Improvements**: Enhanced object layer parsing with better error handling and type detection
+  - **Performance Optimizations**: Reduced memory allocation and improved rendering efficiency for large tilemaps
+
+### Previous Releases
+- **[Version 1.0.21](releases/ReleaseNotes-1.0.21.md)** - Comprehensive 2D Camera System
   - Professional camera architecture with position, zoom, rotation, and smooth following
   - Configurable character screen coverage system (adjustable percentage, default 10%)
   - Multi-input controls: keyboard, gamepad, and mouse wheel with customizable bindings
   - Performance monitoring, diagnostic tools, and world coordinate input integration
   - Complete documentation with troubleshooting guide and migration examples
-
-### Previous Releases
 - **[Version 1.0.20](releases/ReleaseNotes-1.0.20.md)** - Content Scaling System & Steam Deck Support
   - Comprehensive virtual resolution system with automatic scaling and letterboxing
   - Steam Deck auto-detection with native resolution and fullscreen optimization
