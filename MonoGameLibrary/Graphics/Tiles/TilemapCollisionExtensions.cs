@@ -711,6 +711,385 @@ public static class TilemapCollisionExtensions
     }
 
     /// <summary>
+    /// Checks if a sprite collides with tile collision objects in the tilemap.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check collision against.</param>
+    /// <param name="sprite">The sprite to check collision for.</param>
+    /// <param name="spritePosition">The sprite's world position.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>True if the sprite collides with any tile collision object.</returns>
+    public static bool CheckSpriteTileCollision(this Tilemap tilemap, Sprite sprite,
+        Vector2 spritePosition, Vector2 tilemapPosition = default)
+    {
+        if (sprite.Collision == null) return false;
+
+        // Get sprite bounds for broad-phase collision detection
+        var spriteBounds = sprite.Collision.GetBounds(spritePosition);
+        
+        // Calculate which tiles the sprite might be overlapping
+        int startTileX = Math.Max(0, (int)((spriteBounds.Left - tilemapPosition.X) / tilemap.DrawTileWidth));
+        int endTileX = Math.Min(tilemap.Width - 1, (int)((spriteBounds.Right - tilemapPosition.X) / tilemap.DrawTileWidth));
+        int startTileY = Math.Max(0, (int)((spriteBounds.Top - tilemapPosition.Y) / tilemap.DrawTileHeight));
+        int endTileY = Math.Min(tilemap.Height - 1, (int)((spriteBounds.Bottom - tilemapPosition.Y) / tilemap.DrawTileHeight));
+
+        // Check each potentially overlapping tile
+        for (int tileY = startTileY; tileY <= endTileY; tileY++)
+        {
+            for (int tileX = startTileX; tileX <= endTileX; tileX++)
+            {
+                if (CheckSpriteTileCollisionAt(tilemap, sprite, spritePosition, tileX, tileY, tilemapPosition))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a character sprite collides with tile collision objects in the tilemap.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check collision against.</param>
+    /// <param name="characterSprite">The character sprite to check collision for.</param>
+    /// <param name="spritePosition">The character sprite's world position.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>True if the character sprite collides with any tile collision object.</returns>
+    public static bool CheckCharacterSpriteTileCollision(this Tilemap tilemap, CharacterSprite characterSprite,
+        Vector2 spritePosition, Vector2 tilemapPosition = default)
+    {
+        if (characterSprite.Collision == null) return false;
+
+        // Get sprite bounds for broad-phase collision detection
+        var spriteBounds = characterSprite.Collision.GetBounds(spritePosition);
+        
+        // Calculate which tiles the sprite might be overlapping
+        int startTileX = Math.Max(0, (int)((spriteBounds.Left - tilemapPosition.X) / tilemap.DrawTileWidth));
+        int endTileX = Math.Min(tilemap.Width - 1, (int)((spriteBounds.Right - tilemapPosition.X) / tilemap.DrawTileWidth));
+        int startTileY = Math.Max(0, (int)((spriteBounds.Top - tilemapPosition.Y) / tilemap.DrawTileHeight));
+        int endTileY = Math.Min(tilemap.Height - 1, (int)((spriteBounds.Bottom - tilemapPosition.Y) / tilemap.DrawTileHeight));
+
+        // Check each potentially overlapping tile
+        for (int tileY = startTileY; tileY <= endTileY; tileY++)
+        {
+            for (int tileX = startTileX; tileX <= endTileX; tileX++)
+            {
+                if (CheckCharacterSpriteTileCollisionAt(tilemap, characterSprite, spritePosition, tileX, tileY, tilemapPosition))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks collision with a specific tile's collision objects.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check.</param>
+    /// <param name="sprite">The sprite to check collision for.</param>
+    /// <param name="spritePosition">The sprite's world position.</param>
+    /// <param name="tileX">The tile X coordinate.</param>
+    /// <param name="tileY">The tile Y coordinate.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>True if collision occurs with any collision object on this tile.</returns>
+    public static bool CheckSpriteTileCollisionAt(this Tilemap tilemap, Sprite sprite, 
+        Vector2 spritePosition, int tileX, int tileY, Vector2 tilemapPosition = default)
+    {
+        if (sprite.Collision == null) return false;
+
+        // Get the tile collision objects for this position
+        var tileCollisionObjects = tilemap.GetTileCollisionObjects(tileX, tileY);
+        if (tileCollisionObjects == null || tileCollisionObjects.Length == 0)
+            return false;
+
+        // Calculate world position of this tile
+        Vector2 tileWorldPosition = tilemapPosition + new Vector2(
+            tileX * tilemap.DrawTileWidth,
+            tileY * tilemap.DrawTileHeight
+        );
+
+        // Check collision against each collision object on this tile
+        foreach (var collisionObject in tileCollisionObjects)
+        {
+            // Calculate collision object world position (tile position + object offset)
+            Vector2 objectWorldPosition = tileWorldPosition + collisionObject.Position;
+
+            // Create appropriate collision shape and adjust position for shape type
+            ICollisionShape objectCollisionShape;
+            Vector2 adjustedPosition = objectWorldPosition;
+
+            switch (collisionObject.ShapeType)
+            {
+                case CollisionObjectType.Rectangle:
+                    objectCollisionShape = new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+                    break;
+                    
+                case CollisionObjectType.Ellipse when collisionObject.IsCircle:
+                    objectCollisionShape = new CollisionCircle(collisionObject.Radius, Vector2.Zero);
+                    // For circles, adjust position to center of the circle
+                    adjustedPosition = objectWorldPosition + new Vector2(collisionObject.Width * 0.5f, collisionObject.Height * 0.5f);
+                    break;
+                    
+                case CollisionObjectType.Ellipse:
+                    // Non-circular ellipse - treat as rectangle for collision detection
+                    objectCollisionShape = new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+                    break;
+                    
+                case CollisionObjectType.Point:
+                    objectCollisionShape = new CollisionCircle(1f, Vector2.Zero);
+                    break;
+                    
+                case CollisionObjectType.Polygon:
+                    objectCollisionShape = CreatePolygonCollisionShape(collisionObject);
+                    break;
+                    
+                case CollisionObjectType.Polyline:
+                    // Special handling below
+                    objectCollisionShape = null;
+                    break;
+                    
+                default:
+                    objectCollisionShape = new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+                    break;
+            }
+
+            // Special handling for polylines
+            if (collisionObject.ShapeType == CollisionObjectType.Polyline)
+            {
+                if (CheckPolylineCollision(sprite, spritePosition, collisionObject, objectWorldPosition))
+                {
+                    return true;
+                }
+                continue;
+            }
+
+            // Regular collision check
+            var objectCollision = new SpriteCollision(objectCollisionShape);
+            if (sprite.Collision.Intersects(spritePosition, objectCollision, adjustedPosition))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks collision with a specific tile's collision objects for a character sprite.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check.</param>
+    /// <param name="characterSprite">The character sprite to check collision for.</param>
+    /// <param name="spritePosition">The character sprite's world position.</param>
+    /// <param name="tileX">The tile X coordinate.</param>
+    /// <param name="tileY">The tile Y coordinate.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>True if collision occurs with any collision object on this tile.</returns>
+    public static bool CheckCharacterSpriteTileCollisionAt(this Tilemap tilemap, CharacterSprite characterSprite, 
+        Vector2 spritePosition, int tileX, int tileY, Vector2 tilemapPosition = default)
+    {
+        if (characterSprite.Collision == null) return false;
+
+        // Get the tile collision objects for this position
+        var tileCollisionObjects = tilemap.GetTileCollisionObjects(tileX, tileY);
+        if (tileCollisionObjects == null || tileCollisionObjects.Length == 0)
+            return false;
+
+        // Calculate world position of this tile
+        Vector2 tileWorldPosition = tilemapPosition + new Vector2(
+            tileX * tilemap.DrawTileWidth,
+            tileY * tilemap.DrawTileHeight
+        );
+
+        // Check collision against each collision object on this tile
+        foreach (var collisionObject in tileCollisionObjects)
+        {
+            // Calculate collision object world position (tile position + object offset)
+            Vector2 objectWorldPosition = tileWorldPosition + collisionObject.Position;
+
+            // Create appropriate collision shape and adjust position for shape type
+            ICollisionShape objectCollisionShape;
+            Vector2 adjustedPosition = objectWorldPosition;
+
+            switch (collisionObject.ShapeType)
+            {
+                case CollisionObjectType.Rectangle:
+                    objectCollisionShape = new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+                    break;
+                    
+                case CollisionObjectType.Ellipse when collisionObject.IsCircle:
+                    objectCollisionShape = new CollisionCircle(collisionObject.Radius, Vector2.Zero);
+                    // For circles, adjust position to center of the circle
+                    adjustedPosition = objectWorldPosition + new Vector2(collisionObject.Width * 0.5f, collisionObject.Height * 0.5f);
+                    break;
+                    
+                case CollisionObjectType.Ellipse:
+                    // Non-circular ellipse - treat as rectangle for collision detection
+                    objectCollisionShape = new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+                    break;
+                    
+                case CollisionObjectType.Point:
+                    objectCollisionShape = new CollisionCircle(1f, Vector2.Zero);
+                    break;
+                    
+                case CollisionObjectType.Polygon:
+                    objectCollisionShape = CreatePolygonCollisionShape(collisionObject);
+                    break;
+                    
+                case CollisionObjectType.Polyline:
+                    // Special handling below
+                    objectCollisionShape = null;
+                    break;
+                    
+                default:
+                    objectCollisionShape = new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero);
+                    break;
+            }
+
+            // Special handling for polylines
+            if (collisionObject.ShapeType == CollisionObjectType.Polyline)
+            {
+                if (CheckPolylineCollision(characterSprite, spritePosition, collisionObject, objectWorldPosition))
+                {
+                    return true;
+                }
+                continue;
+            }
+
+            // Regular collision check
+            var objectCollision = new SpriteCollision(objectCollisionShape);
+            if (characterSprite.Collision.Intersects(spritePosition, objectCollision, adjustedPosition))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the collision objects for a specific tile position.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to query.</param>
+    /// <param name="tileX">The tile X coordinate.</param>
+    /// <param name="tileY">The tile Y coordinate.</param>
+    /// <returns>Array of collision objects for this tile, or null if no collision objects.</returns>
+    public static CollisionObject[] GetTileCollisionObjects(this Tilemap tilemap, int tileX, int tileY)
+    {
+        // Check bounds
+        if (tileX < 0 || tileX >= tilemap.Width || tileY < 0 || tileY >= tilemap.Height)
+            return null;
+
+        // Look through all tile layers to find tiles at this position
+        foreach (var layer in tilemap.TileLayers)
+        {
+            if (!layer.Visible) continue;
+
+            int tileIndex = tileY * layer.Width + tileX;
+            if (tileIndex >= layer.Tiles.Length) continue;
+
+            int gid = layer.Tiles[tileIndex];
+            if (gid == 0) continue; // Empty tile
+
+            // Find the tile data for this GID
+            if (tilemap.GetTileData(gid, out var tileData) && 
+                tileData.CollisionObjects != null && 
+                tileData.CollisionObjects.Length > 0)
+            {
+                // Convert object array to CollisionObject array
+                var collisionObjects = new List<CollisionObject>();
+                foreach (var obj in tileData.CollisionObjects)
+                {
+                    if (obj is CollisionObject collisionObj)
+                    {
+                        collisionObjects.Add(collisionObj);
+                    }
+                }
+                
+                return collisionObjects.ToArray();
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Draws collision visualization for all tile collision objects.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to draw collision for.</param>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position offset to draw at.</param>
+    /// <param name="collisionColor">The color to draw collision shapes with.</param>
+    public static void DrawTileCollisionObjects(this Tilemap tilemap, SpriteBatch spriteBatch,
+        Vector2 position, Color collisionColor)
+    {
+        if (!Core.ShowCollisionBoxes) return;
+
+        for (int tileY = 0; tileY < tilemap.Height; tileY++)
+        {
+            for (int tileX = 0; tileX < tilemap.Width; tileX++)
+            {
+                var tileCollisionObjects = tilemap.GetTileCollisionObjects(tileX, tileY);
+                if (tileCollisionObjects == null || tileCollisionObjects.Length == 0)
+                    continue;
+
+                Vector2 tileWorldPosition = position + new Vector2(
+                    tileX * tilemap.DrawTileWidth,
+                    tileY * tilemap.DrawTileHeight
+                );
+
+                foreach (var collisionObject in tileCollisionObjects)
+                {
+                    Vector2 objectPosition = tileWorldPosition + collisionObject.Position;
+                    DrawCollisionObjectShape(spriteBatch, collisionObject, objectPosition, collisionColor);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Helper method to draw a collision object shape.
+    /// </summary>
+    private static void DrawCollisionObjectShape(SpriteBatch spriteBatch, CollisionObject collisionObject, 
+        Vector2 position, Color color)
+    {
+        switch (collisionObject.ShapeType)
+        {
+            case CollisionObjectType.Rectangle:
+                var rect = new Rectangle((int)position.X, (int)position.Y, collisionObject.Width, collisionObject.Height);
+                CollisionDraw.DrawRectangle(spriteBatch, rect, color);
+                break;
+
+            case CollisionObjectType.Ellipse:
+                if (collisionObject.IsCircle)
+                {
+                    // For perfect circles, draw as circle centered in the collision area
+                    Vector2 circleCenter = position + new Vector2(collisionObject.Width * 0.5f, collisionObject.Height * 0.5f);
+                    CollisionDraw.DrawCircle(spriteBatch, circleCenter, collisionObject.Radius, color);
+                }
+                else
+                {
+                    // For non-circular ellipses, draw as an approximate ellipse using multiple circles
+                    DrawEllipse(spriteBatch, position, collisionObject.Width, collisionObject.Height, color);
+                }
+                break;
+
+            case CollisionObjectType.Point:
+                CollisionDraw.DrawCircle(spriteBatch, position, 2f, color);
+                break;
+
+            case CollisionObjectType.Polygon:
+                DrawPolygonOutline(spriteBatch, collisionObject.PolygonPoints, position, color);
+                break;
+
+            case CollisionObjectType.Polyline:
+                DrawPolylineOutline(spriteBatch, collisionObject.PolygonPoints, position, color);
+                break;
+        }
+    }
+
+    /// <summary>
     /// Automatically draws collision visualization for all object layers when developer mode is active.
     /// Call this in your tilemap drawing code to show collision boxes automatically.
     /// </summary>
@@ -731,6 +1110,40 @@ public static class TilemapCollisionExtensions
             {
                 tilemap.DrawObjectLayerAsCollision(spriteBatch, layer.Name, position, color);
             }
+        }
+        
+        // Draw collision for tile collision objects
+        tilemap.DrawTileCollisionObjects(spriteBatch, position, Color.Yellow);
+    }
+
+    /// <summary>
+    /// Draws an approximate ellipse using multiple small circles.
+    /// </summary>
+    private static void DrawEllipse(SpriteBatch spriteBatch, Vector2 position, float width, float height, Color color)
+    {
+        Vector2 center = position + new Vector2(width * 0.5f, height * 0.5f);
+        float radiusX = width * 0.5f;
+        float radiusY = height * 0.5f;
+        
+        // Draw ellipse outline using multiple points
+        int segments = Math.Max(16, (int)(Math.Max(radiusX, radiusY) * 0.5f)); // More segments for larger ellipses
+        
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = (float)(2 * Math.PI * i / segments);
+            float nextAngle = (float)(2 * Math.PI * (i + 1) / segments);
+            
+            Vector2 point1 = center + new Vector2(
+                radiusX * (float)Math.Cos(angle),
+                radiusY * (float)Math.Sin(angle)
+            );
+            
+            Vector2 point2 = center + new Vector2(
+                radiusX * (float)Math.Cos(nextAngle),
+                radiusY * (float)Math.Sin(nextAngle)
+            );
+            
+            CollisionDraw.DrawLine(spriteBatch, point1, point2, color);
         }
     }
 }

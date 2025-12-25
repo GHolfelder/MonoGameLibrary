@@ -219,6 +219,10 @@ public class PlayerSprite : CharacterSprite
         if (Collision == null)
             return true;
 
+        // Check collision against tile collision objects
+        if (_currentTilemap.CheckCharacterSpriteTileCollision(this, newPosition, _tilemapPosition))
+            return false;
+
         // Check collision against the specified object layer
         return !_currentTilemap.CheckCharacterSpriteObjectCollision(this, newPosition, _collisionLayerName, _tilemapPosition);
     }
