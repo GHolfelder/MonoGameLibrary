@@ -298,15 +298,18 @@ Add the MonoGame Library project to your solution and reference it from your gam
 Track the evolution of MonoGame Library through our detailed release notes:
 
 ### Current Version
-- **[Version 1.0.22](releases/ReleaseNotes-1.0.22.md)** *(Latest)* - Enhanced Tilemap System & Animation Improvements
-  - **Improved Animation Performance**: Optimized animated tile instance management with per-layer tracking
-  - **Enhanced JSON Parsing**: Better collision object parsing with robust shape type detection
-  - **Collision Object Enhancements**: Added support for text objects and improved property handling
-  - **Animation State Management**: More efficient animation frame cycling with proper timing controls
-  - **Object Layer Improvements**: Enhanced object layer parsing with better error handling and type detection
-  - **Performance Optimizations**: Reduced memory allocation and improved rendering efficiency for large tilemaps
+- **[Version 1.0.23](releases/ReleaseNotes-1.0.23.md)** *(Latest)* - Tile Collision Integration System
+  - **Tile Collision Integration**: PlayerSprite integration with tilemap collision detection via TilemapCollisionExtensions
+  - **Collision Extension Methods**: Easy-to-use extension methods for tile-based collision detection
+  - **Complete Documentation**: Comprehensive integration guide with examples and best practices
+  - **PlayerSprite Enhancement**: Built-in collision detection methods added directly to PlayerSprite class
 
 ### Previous Releases
+- **[Version 1.0.22](releases/ReleaseNotes-1.0.22.md)** - Animated Tile System
+  - **Animated Tile Support**: Complete animated tile system with JSON configuration and automatic frame cycling
+  - **JSON Animation Loading**: Support for animated tile definitions in tilemap JSON with customizable frame durations
+  - **Automatic Animation Updates**: Simple tilemap.Update(gameTime) call enables all tile animations
+  - **Animation Framework**: AnimatedTile, AnimatedTileFrame, and AnimatedTileInstance classes
 - **[Version 1.0.21](releases/ReleaseNotes-1.0.21.md)** - Comprehensive 2D Camera System
   - Professional camera architecture with position, zoom, rotation, and smooth following
   - Configurable character screen coverage system (adjustable percentage, default 10%)
