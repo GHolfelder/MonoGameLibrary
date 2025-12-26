@@ -140,7 +140,7 @@ jobs:
     
     steps:
     - name: Download package artifact
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: nuget-package-${{ needs.package.outputs.full-version }}
         path: ./packages
@@ -174,7 +174,7 @@ jobs:
       uses: actions/checkout@v6
       
     - name: Download package artifact
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: nuget-package-${{ needs.package.outputs.full-version }}
         path: ./packages
