@@ -10,6 +10,84 @@ using Microsoft.Xna.Framework.Graphics;
 namespace MonoGameLibrary.Graphics.Tiles;
 
 /// <summary>
+/// Represents a collection of tilemaps loaded from a single JSON file.
+/// </summary>
+public class TilemapCollection
+{
+    private readonly Dictionary<string, Tilemap> _tilemaps;
+    
+    public TilemapCollection()
+    {
+        _tilemaps = new Dictionary<string, Tilemap>(StringComparer.OrdinalIgnoreCase);
+    }
+    
+    /// <summary>
+    /// Gets all available map names.
+    /// </summary>
+    public IEnumerable<string> MapNames => _tilemaps.Keys;
+    
+    /// <summary>
+    /// Gets the number of maps in the collection.
+    /// </summary>
+    public int Count => _tilemaps.Count;
+    
+    /// <summary>
+    /// Gets a tilemap by name.
+    /// </summary>
+    /// <param name="mapName">The name of the map to retrieve.</param>
+    /// <returns>The tilemap with the specified name.</returns>
+    public Tilemap GetMap(string mapName)
+    {
+        if (_tilemaps.TryGetValue(mapName, out Tilemap tilemap))
+        {
+            return tilemap;
+        }
+        throw new ArgumentException($"Map '{mapName}' not found. Available maps: {string.Join(", ", MapNames)}");
+    }
+    
+    /// <summary>
+    /// Tries to get a tilemap by name.
+    /// </summary>
+    /// <param name="mapName">The name of the map to retrieve.</param>
+    /// <param name="tilemap">The tilemap if found.</param>
+    /// <returns>True if the map was found, false otherwise.</returns>
+    public bool TryGetMap(string mapName, out Tilemap tilemap)
+    {
+        return _tilemaps.TryGetValue(mapName, out tilemap);
+    }
+    
+    /// <summary>
+    /// Adds a tilemap to the collection.
+    /// </summary>
+    internal void AddMap(Tilemap tilemap)
+    {
+        _tilemaps[tilemap.Name] = tilemap;
+    }
+    
+    /// <summary>
+    /// Gets a tilemap by index (in order of addition).
+    /// </summary>
+    /// <param name="index">The index of the map.</param>
+    /// <returns>The tilemap at the specified index.</returns>
+    public Tilemap this[int index]
+    {
+        get
+        {
+            if (index < 0 || index >= _tilemaps.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return _tilemaps.Values.ElementAt(index);
+        }
+    }
+    
+    /// <summary>
+    /// Gets a tilemap by name.
+    /// </summary>
+    /// <param name="mapName">The name of the map.</param>
+    /// <returns>The tilemap with the specified name.</returns>
+    public Tilemap this[string mapName] => GetMap(mapName);
+}
+
+/// <summary>
 /// Represents a single frame of a tile animation.
 /// </summary>
 public class AnimatedTileFrame
@@ -290,13 +368,14 @@ public class Tilemap
     }
 
     /// <summary>
-    /// Creates a new tilemap by loading and parsing a JSON file with a pre-loaded texture atlas.
+    /// Creates a collection of tilemaps by loading and parsing a JSON file with a pre-loaded texture atlas.
+    /// Expects a JSON array of map objects.
     /// </summary>
     /// <param name="content">The content manager to use for loading resources.</param>
     /// <param name="jsonFilename">The JSON file path relative to the content directory.</param>
     /// <param name="textureAtlas">The pre-loaded texture atlas containing tile sprites.</param>
-    /// <returns>A new Tilemap instance loaded from JSON.</returns>
-    public static Tilemap FromJson(ContentManager content, string jsonFilename, TextureAtlas textureAtlas)
+    /// <returns>A TilemapCollection containing all maps loaded from JSON.</returns>
+    public static TilemapCollection FromJson(ContentManager content, string jsonFilename, TextureAtlas textureAtlas)
     {
         string jsonPath = Path.Combine(content.RootDirectory, jsonFilename);
         
@@ -308,60 +387,99 @@ public class Tilemap
                 JsonDocument document = JsonDocument.Parse(jsonContent);
                 JsonElement root = document.RootElement;
 
-                // Parse map properties
-                string name = root.GetProperty("name").GetString();
-                int width = root.GetProperty("width").GetInt32();
-                int height = root.GetProperty("height").GetInt32();
-                int tileWidth = root.GetProperty("tileWidth").GetInt32();
-                int tileHeight = root.GetProperty("tileHeight").GetInt32();
-                string orientation = root.GetProperty("orientation").GetString();
-                
-                // Use the provided texture atlas instead of loading a new one
-                // This follows the singleton Core pattern for shared resource management
+                var collection = new TilemapCollection();
 
-                // Create the tilemap
-                Tilemap tilemap = new Tilemap(name, width, height, tileWidth, tileHeight, orientation, textureAtlas);
-
-                // Parse background color if present
-                if (root.TryGetProperty("backgroundColor", out JsonElement bgColorElement) && bgColorElement.ValueKind != JsonValueKind.Null)
+                // Expect JSON array format: [{ "name": "map1", ... }, { "name": "map2", ... }]
+                if (root.ValueKind == JsonValueKind.Array)
                 {
-                    string bgColorHex = bgColorElement.GetString();
-                    if (!string.IsNullOrEmpty(bgColorHex))
-                    {
-                        tilemap.BackgroundColor = ParseColor(bgColorHex);
-                    }
+                    LoadFromMapsArrayFormat(root, textureAtlas, collection);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Invalid JSON tilemap format in file: {jsonFilename}. Expected array of map objects.");
                 }
 
-                // Parse tilesets
-                if (root.TryGetProperty("tilesets", out JsonElement tilesetsElement))
+                if (collection.Count == 0)
                 {
-                    foreach (JsonElement tilesetElement in tilesetsElement.EnumerateArray())
-                    {
-                        tilemap.LoadTilesetFromJson(tilesetElement);
-                    }
+                    throw new InvalidOperationException($"No valid maps found in JSON file: {jsonFilename}");
                 }
 
-                // Parse tile layers
-                if (root.TryGetProperty("tileLayers", out JsonElement layersElement))
-                {
-                    foreach (JsonElement layerElement in layersElement.EnumerateArray())
-                    {
-                        tilemap.LoadTileLayerFromJson(layerElement);
-                    }
-                }
-
-                // Parse object layers
-                if (root.TryGetProperty("objectLayers", out JsonElement objectLayersElement))
-                {
-                    foreach (JsonElement objectLayerElement in objectLayersElement.EnumerateArray())
-                    {
-                        tilemap.LoadObjectLayerFromJson(objectLayerElement);
-                    }
-                }
-
-                return tilemap;
+                return collection;
             }
         }
+    }
+
+    /// <summary>
+    /// Loads maps from array format: [{ "name": "map1", ... }, { "name": "map2", ... }]
+    /// </summary>
+    private static void LoadFromMapsArrayFormat(JsonElement mapsArray, TextureAtlas textureAtlas, TilemapCollection collection)
+    {
+        foreach (JsonElement mapElement in mapsArray.EnumerateArray())
+        {
+            // Extract map name from the map element
+            string mapName = mapElement.TryGetProperty("name", out JsonElement nameElement) 
+                ? nameElement.GetString() 
+                : $"Map_{collection.Count}"; // Fallback name if none specified
+                
+            Tilemap tilemap = LoadSingleMapFromJson(mapElement, textureAtlas, mapName);
+            collection.AddMap(tilemap);
+        }
+    }
+
+    /// <summary>
+    /// Loads a single map from a JSON element.
+    /// </summary>
+    private static Tilemap LoadSingleMapFromJson(JsonElement mapElement, TextureAtlas textureAtlas, string mapName)
+    {
+        // Parse map properties
+        string name = mapElement.TryGetProperty("name", out JsonElement nameElement) ? nameElement.GetString() : mapName;
+        int width = mapElement.GetProperty("width").GetInt32();
+        int height = mapElement.GetProperty("height").GetInt32();
+        int tileWidth = mapElement.GetProperty("tileWidth").GetInt32();
+        int tileHeight = mapElement.GetProperty("tileHeight").GetInt32();
+        string orientation = mapElement.GetProperty("orientation").GetString();
+        
+        // Create the tilemap
+        Tilemap tilemap = new Tilemap(name, width, height, tileWidth, tileHeight, orientation, textureAtlas);
+
+        // Parse background color if present
+        if (mapElement.TryGetProperty("backgroundColor", out JsonElement bgColorElement) && bgColorElement.ValueKind != JsonValueKind.Null)
+        {
+            string bgColorHex = bgColorElement.GetString();
+            if (!string.IsNullOrEmpty(bgColorHex))
+            {
+                tilemap.BackgroundColor = ParseColor(bgColorHex);
+            }
+        }
+
+        // Parse tilesets
+        if (mapElement.TryGetProperty("tilesets", out JsonElement tilesetsElement))
+        {
+            foreach (JsonElement tilesetElement in tilesetsElement.EnumerateArray())
+            {
+                tilemap.LoadTilesetFromJson(tilesetElement);
+            }
+        }
+
+        // Parse tile layers
+        if (mapElement.TryGetProperty("tileLayers", out JsonElement layersElement))
+        {
+            foreach (JsonElement layerElement in layersElement.EnumerateArray())
+            {
+                tilemap.LoadTileLayerFromJson(layerElement);
+            }
+        }
+
+        // Parse object layers
+        if (mapElement.TryGetProperty("objectLayers", out JsonElement objectLayersElement))
+        {
+            foreach (JsonElement objectLayerElement in objectLayersElement.EnumerateArray())
+            {
+                tilemap.LoadObjectLayerFromJson(objectLayerElement);
+            }
+        }
+
+        return tilemap;
     }
 
     /// <summary>

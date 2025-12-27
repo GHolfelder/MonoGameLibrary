@@ -117,8 +117,9 @@ var virtualClick = Core.Input.Mouse.VirtualX; // Always in virtual space
 Professional tilemap rendering with proper depth management and comprehensive collision detection:
 
 ```csharp
-// Load tilemap from JSON with texture atlas integration
-Tilemap tilemap = Tilemap.FromJson(Content, "maps/level1.json");
+// Load tilemaps from JSON with texture atlas integration
+var tilemaps = Tilemap.FromJson(Content, "maps/level1.json", textureAtlas);
+Tilemap tilemap = tilemaps["level1"]; // or tilemaps[0] for first map
 
 // Render with proper z-ordering
 tilemap.DrawLayersUpTo(spriteBatch, position, 0);    // Background
@@ -163,6 +164,7 @@ if (player.CheckCollision(playerPos, enemy, enemyPos))
 }
 
 // Object layer collision with multiple shapes
+// (assuming tilemap was retrieved from TilemapCollection earlier)
 var objectLayer = tilemap.GetObjectLayer("Interactive");
 foreach (var obj in objectLayer.Objects)
 {
@@ -259,11 +261,14 @@ public class GameLevel : Scene
 {
     private Tilemap _tilemap;
     private Player _player;
+    private TextureAtlas _atlas;
 
     public override void LoadContent()
     {
-        // Load JSON tilemap with texture atlas integration
-        _tilemap = Tilemap.FromJson(Content, "maps/forest.json");
+        // Load texture atlas and tilemaps
+        _atlas = TextureAtlas.FromJsonTexture(Content, "atlas.json");
+        var tilemaps = Tilemap.FromJson(Content, "maps/forest.json", _atlas);
+        _tilemap = tilemaps["forest"]; // Access by name or use tilemaps[0]
         _player = new Player(Content);
     }
 
@@ -298,11 +303,13 @@ Add the MonoGame Library project to your solution and reference it from your gam
 Track the evolution of MonoGame Library through our detailed release notes:
 
 ### Current Version
-- **[Version 1.0.23](releases/ReleaseNotes-1.0.23.md)** *(Latest)* - Tile Collision Integration System
+- **[Version 1.0.23](releases/ReleaseNotes-1.0.23.md)** *(Latest)* - Multiple Maps & Tile Collision Integration
+  - **Multiple Maps Support**: TilemapCollection for loading and managing multiple tilemaps from single JSON files
+  - **Flexible JSON Formats**: Support for both object-based and array-based multiple map JSON structures
   - **Tile Collision Integration**: PlayerSprite integration with tilemap collision detection via TilemapCollisionExtensions
   - **Collision Extension Methods**: Easy-to-use extension methods for tile-based collision detection
   - **Complete Documentation**: Comprehensive integration guide with examples and best practices
-  - **PlayerSprite Enhancement**: Built-in collision detection methods added directly to PlayerSprite class
+  - **Breaking Change**: FromJson now returns TilemapCollection instead of single Tilemap
 
 ### Previous Releases
 - **[Version 1.0.22](releases/ReleaseNotes-1.0.22.md)** - Animated Tile System
