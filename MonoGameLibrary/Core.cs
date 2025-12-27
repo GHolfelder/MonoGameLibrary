@@ -238,6 +238,28 @@ public class Core : Game
 
     private static bool s_developerMode = false;
     private static bool s_showCollisionBoxes = false;
+    private static SpriteFont s_debugFont = null;
+    private static float s_debugFontScale = 1.0f;
+    
+    /// <summary>
+    /// Gets or sets the font used for developer mode text rendering (collision markers, debug info, etc.).
+    /// Can be set to any SpriteFont loaded by the game.
+    /// </summary>
+    public static SpriteFont DebugFont
+    {
+        get => s_debugFont;
+        set => s_debugFont = value;
+    }
+    
+    /// <summary>
+    /// Gets or sets the scaling factor for debug font rendering.
+    /// Default is 1.0f. Use values like 0.8f for smaller text or 1.2f for larger text.
+    /// </summary>
+    public static float DebugFontScale
+    {
+        get => s_debugFontScale;
+        set => s_debugFontScale = Math.Max(0.1f, value); // Prevent negative or zero scaling
+    }
     
     /// <summary>
     /// Gets whether the application is running in debug mode

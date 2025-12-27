@@ -245,6 +245,16 @@ public static class TilemapCollisionExtensions
                         collisionObject.Height
                     );
                     CollisionDraw.DrawRectangle(spriteBatch, objectRect, collisionColor);
+                    
+                    // Draw object name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X + collisionObject.Width * 0.5f, 
+                            objectPosition.Y - 5
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
                     
                 case CollisionObjectType.Ellipse:
@@ -266,21 +276,64 @@ public static class TilemapCollisionExtensions
                         );
                         CollisionDraw.DrawRectangle(spriteBatch, ellipseRect, collisionColor);
                     }
+                    
+                    // Draw object name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X + collisionObject.Width * 0.5f, 
+                            objectPosition.Y - 5
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
                     
                 case CollisionObjectType.Point:
-                    // Draw point as small circle
-                    CollisionDraw.DrawCircle(spriteBatch, objectPosition, 2f, collisionColor);
+                    // Draw Google Maps style marker
+                    DrawMapMarker(spriteBatch, objectPosition, collisionColor);
+                    
+                    // Draw marker name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        // Position name above the marker circle (pin extends 12f up, circle has 8f radius)
+                        float scaledOffset = 5f * Core.DebugFontScale;
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X, 
+                            objectPosition.Y - 12f - 8f - scaledOffset  // Above circle top with scaled gap
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
                     
                 case CollisionObjectType.Polygon:
                     // Draw polygon edges (closed shape)
                     DrawPolygonOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
+                    
+                    // Draw object name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X + collisionObject.Width * 0.5f, 
+                            objectPosition.Y - 5
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
                     
                 case CollisionObjectType.Polyline:
                     // Draw polyline edges (open path)
                     DrawPolylineOutline(spriteBatch, collisionObject.PolygonPoints, objectPosition, collisionColor);
+                    
+                    // Draw object name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        float scaledOffset = 5f * Core.DebugFontScale;
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X + collisionObject.Width * 0.5f, 
+                            objectPosition.Y - scaledOffset
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
                     
                 case CollisionObjectType.Tile:
@@ -292,6 +345,17 @@ public static class TilemapCollisionExtensions
                         collisionObject.Height
                     );
                     CollisionDraw.DrawRectangle(spriteBatch, tileRect, collisionColor);
+                    
+                    // Draw object name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        float scaledOffset = 5f * Core.DebugFontScale;
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X + collisionObject.Width * 0.5f, 
+                            objectPosition.Y - scaledOffset
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
                     
                 case CollisionObjectType.Text:
@@ -303,6 +367,17 @@ public static class TilemapCollisionExtensions
                         collisionObject.Height
                     );
                     CollisionDraw.DrawRectangle(spriteBatch, textRect, collisionColor);
+                    
+                    // Draw object name if available
+                    if (!string.IsNullOrEmpty(collisionObject.Name))
+                    {
+                        float scaledOffset = 5f * Core.DebugFontScale;
+                        Vector2 namePosition = new Vector2(
+                            objectPosition.X + collisionObject.Width * 0.5f, 
+                            objectPosition.Y - scaledOffset
+                        );
+                        DrawObjectName(spriteBatch, namePosition, collisionObject.Name, collisionColor, Core.DebugFont);
+                    }
                     break;
             }
         }
@@ -1144,6 +1219,87 @@ public static class TilemapCollisionExtensions
             );
             
             CollisionDraw.DrawLine(spriteBatch, point1, point2, color);
+        }
+    }
+
+    /// <summary>
+    /// Draws a maps style marker at the specified position.
+    /// </summary>
+    private static void DrawMapMarker(SpriteBatch spriteBatch, Vector2 position, Color color)
+    {
+        const float markerRadius = 8f;
+        const float pinHeight = 12f;
+        
+        // Calculate marker components positions
+        Vector2 circleCenter = position + new Vector2(0, -pinHeight);
+        Vector2 pinBottom = position;
+        Vector2 pinLeft = circleCenter + new Vector2(-markerRadius * 0.6f, markerRadius * 0.8f);
+        Vector2 pinRight = circleCenter + new Vector2(markerRadius * 0.6f, markerRadius * 0.8f);
+        
+        // Draw the pin (triangle pointing down)
+        CollisionDraw.DrawLine(spriteBatch, pinLeft, pinBottom, color);
+        CollisionDraw.DrawLine(spriteBatch, pinRight, pinBottom, color);
+        CollisionDraw.DrawLine(spriteBatch, pinLeft, pinRight, color);
+        
+        // Draw the circular top part
+        CollisionDraw.DrawCircle(spriteBatch, circleCenter, markerRadius, color);
+        
+        // Draw inner circle (marker dot)
+        CollisionDraw.DrawCircle(spriteBatch, circleCenter, markerRadius * 0.4f, color);
+    }
+
+    /// <summary>
+    /// Draws the object name above the collision shape.    
+    /// <para>    
+    /// Note: For actual text rendering, a SpriteFont must be provided.
+    /// When no font is available, falls back to simple rectangle visualization.
+    /// </para>
+    /// </summary>
+    private static void DrawObjectName(SpriteBatch spriteBatch, Vector2 objectPosition, string name, Color color, SpriteFont font = null)
+    {
+        if (font != null)
+        {
+            // Use actual text rendering with SpriteFont and scaling
+            float fontScale = Core.DebugFontScale;
+            Vector2 textSize = font.MeasureString(name) * fontScale;
+            float scaledOffset = 5f * fontScale; // Scale the gap between object and text
+            Vector2 textPosition = objectPosition + new Vector2(-textSize.X * 0.5f, -textSize.Y - scaledOffset);
+            
+            // Draw background rectangle for better readability
+            var textBounds = new Rectangle(
+                (int)(textPosition.X - 2),
+                (int)(textPosition.Y - 2),
+                (int)textSize.X + 4,
+                (int)textSize.Y + 4
+            );
+            
+            // Draw text background with semi-transparent version of the color
+            var backgroundColor = new Color(color.R, color.G, color.B, (byte)128);
+            CollisionDraw.DrawRectangle(spriteBatch, textBounds, backgroundColor);
+            
+            // Draw the actual text with scaling
+            spriteBatch.DrawString(font, name, textPosition, color, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
+        }
+        else
+        {
+            // Fallback to current box-based representation when no font is available
+            float fallbackScale = Core.DebugFontScale;
+            float scaledOffset = 15f * fallbackScale;
+            Vector2 textPosition = objectPosition + new Vector2(-name.Length * 3f, -scaledOffset);
+            
+            var textBounds = new Rectangle(
+                (int)(textPosition.X - 2),
+                (int)(textPosition.Y - 2),
+                name.Length * 6 + 4,
+                12
+            );
+            
+            // Draw text background with semi-transparent version of the color
+            var backgroundColor = new Color(color.R, color.G, color.B, (byte)128);
+            CollisionDraw.DrawRectangle(spriteBatch, textBounds, backgroundColor);
+            
+            // Draw text border
+            CollisionDraw.DrawRectangle(spriteBatch, textBounds, color);
         }
     }
 }
