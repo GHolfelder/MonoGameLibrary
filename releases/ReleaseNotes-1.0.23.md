@@ -5,6 +5,12 @@
 
 ## 🎯 Major Features
 
+### Multiple Maps Support System
+- **TilemapCollection**: New collection class for managing multiple tilemaps loaded from a single JSON file
+- **Array-Based JSON Format**: JSON files contain arrays of map objects (`[{"name": "map1", ...}, {"name": "map2", ...}]`)
+- **Enhanced Map Access**: Multiple ways to access maps - by name, by index, with safe TryGet patterns
+- **Breaking Change**: FromJson method now returns TilemapCollection instead of single Tilemap for improved multi-map workflow
+
 ### Tile Collision Integration System
 - **PlayerSprite Integration**: PlayerSprite now seamlessly integrates with tilemap collision detection for tile-based games
 - **TilemapCollisionExtensions**: New extension methods providing easy-to-use, discoverable tile-based collision detection API
@@ -13,6 +19,12 @@
 
 ## 🔧 Technical Improvements
 
+### Multiple Maps Architecture
+- **TilemapCollection Class**: Dictionary-based storage with case-insensitive map name lookup for efficient access
+- **Array-Only JSON Parsing**: Expects direct JSON arrays containing map objects with clear error messaging for invalid formats
+- **Memory Efficient**: Smart loading that only creates necessary tilemap instances without duplication
+- **Error Handling**: Comprehensive error messages listing available maps when requested map is not found
+
 ### Collision System Architecture
 - **Extension Method Pattern**: Clean, discoverable API through extension methods that feel natural to use
 - **PlayerSprite Enhancement**: Built-in collision detection methods added directly to PlayerSprite class
@@ -20,6 +32,28 @@
 - **Performance Optimized**: Efficient collision detection algorithms designed for real-time gameplay
 
 ## 🚀 New Classes & APIs
+
+### TilemapCollection
+```csharp
+public class TilemapCollection
+{
+    // Access maps by name or index
+    public Tilemap this[string mapName] { get; }
+    public Tilemap this[int index] { get; }
+    
+    // Map management
+    public Tilemap GetMap(string mapName)
+    public bool TryGetMap(string mapName, out Tilemap tilemap)
+    public IEnumerable<string> MapNames { get; }
+    public int Count { get; }
+}
+```
+
+### Updated FromJson Method
+```csharp
+// Breaking change: Now returns TilemapCollection instead of single Tilemap
+public static TilemapCollection FromJson(ContentManager content, string jsonFilename, TextureAtlas textureAtlas)
+```
 
 ### TilemapCollisionExtensions
 ```csharp
@@ -46,11 +80,46 @@ public class PlayerSprite
 
 ## 🎮 Usage Examples
 
+### Multiple Maps Loading
+```csharp
+// Load all maps from JSON file
+var tilemaps = Tilemap.FromJson(Content, "levels.json", textureAtlas);
+
+// Access maps by name
+var level1 = tilemaps["level1"];
+var bossLevel = tilemaps.GetMap("boss_level");
+
+// Access by index
+var firstMap = tilemaps[0];
+
+// Check available maps
+foreach (string mapName in tilemaps.MapNames)
+{
+    Console.WriteLine($"Available map: {mapName}");
+}
+
+// Safe access pattern
+if (tilemaps.TryGetMap("secret_level", out Tilemap secretLevel))
+{
+    // Use secret level
+}
+```
+
+### JSON Format Examples
+```json
+// Array format
+[
+  { "name": "level1", "width": 30, "height": 20, ... },
+  { "name": "level2", "width": 25, "height": 15, ... }
+]
+```
+
 ### Basic Tile Collision
 ```csharp
 // PlayerSprite with integrated tile collision
 var player = new PlayerSprite(textureAtlas, "player");
-var tilemap = Tilemap.FromJson(Content, "maps/level1.json", textureAtlas);
+var tilemaps = Tilemap.FromJson(Content, "maps/levels.json", textureAtlas);
+var currentLevel = tilemaps["level1"];
 
 // In your Update method
 protected override void Update(GameTime gameTime)
@@ -58,7 +127,7 @@ protected override void Update(GameTime gameTime)
     player.Update(gameTime);
     
     // Check collision using extension method
-    if (tilemap.CheckTileCollision(player))
+    if (currentLevel.CheckTileCollision(player))
     {
         // Handle collision automatically
         player.HandleTileCollision();
@@ -114,7 +183,9 @@ public class GameScene : Scene
 ```
 
 ## 🔄 Breaking Changes
-- **None**: All changes are backward compatible with existing v1.0.22 code
+- **FromJson Return Type**: `Tilemap.FromJson()` now returns `TilemapCollection` instead of single `Tilemap` 
+- **JSON Format Requirement**: Single map JSON files are no longer supported - must use multiple maps format
+- **Map Access Pattern**: Maps must now be accessed via collection indexers (`maps["level1"]`) instead of direct tilemap reference
 
 ## 🐛 Bug Fixes
 - **Collision Accuracy**: Enhanced precision of tile-based collision calculations
@@ -142,23 +213,66 @@ public class GameScene : Scene
 
 ## ⬆️ Upgrade Guide
 
-### From Version 1.0.22
-1. **No Breaking Changes**: Existing animated tile code from v1.0.22 continues to work unchanged
-2. **Add Collision Logic**: Optionally use new collision extension methods for PlayerSprite
-3. **Enhanced Gameplay**: Easy to add tile-based collision to existing games
-4. **Documentation**: Follow integration guide for best practices
+### From Version 1.0.22 - **BREAKING CHANGES**
+1. **Update JSON Format**: Convert single map JSON files to multiple maps format
+2. **Update FromJson Usage**: Handle TilemapCollection return type instead of single Tilemap
+3. **Update Map Access**: Use collection indexers to access specific maps
+4. **Collision Integration**: Optionally add new collision extension methods
 
-### Simple Integration
+### Required Code Changes
 ```csharp
-// Existing v1.0.22 code continues to work
-tilemap.Update(gameTime);           // Animations (v1.0.22)
-tilemap.Draw(spriteBatch, position); // Rendering (unchanged)
+// BEFORE (v1.0.22)
+var tilemap = Tilemap.FromJson(Content, "level1.json", textureAtlas);
+tilemap.Update(gameTime);
+tilemap.Draw(spriteBatch, position);
 
-// Add collision detection (new in v1.0.23)
+// AFTER (v1.0.23)
+var tilemaps = Tilemap.FromJson(Content, "levels.json", textureAtlas);
+var tilemap = tilemaps["level1"]; // or tilemaps[0] for first map
+tilemap.Update(gameTime);
+tilemap.Draw(spriteBatch, position);
+
+// Add collision detection (new feature)
 if (tilemap.CheckTileCollision(player))
 {
     player.HandleTileCollision();
 }
+```
+
+### JSON Migration
+```json
+// BEFORE (single map file - level1.json)
+{
+  "name": "level1",
+  "width": 30,
+  "height": 20,
+  "tileWidth": 32,
+  "tileHeight": 32,
+  "tilesets": [...],
+  "tileLayers": [...]
+}
+
+// AFTER (multiple maps file - levels.json)
+[
+  {
+    "name": "level1",
+    "width": 30,
+    "height": 20,
+    "tileWidth": 32,
+    "tileHeight": 32,
+    "tilesets": [...],
+    "tileLayers": [...]
+  },
+  {
+    "name": "level2",
+    "width": 25,
+    "height": 15,
+    "tileWidth": 32,
+    "tileHeight": 32,
+    "tilesets": [...],
+    "tileLayers": [...]
+  }
+]
 ```
 
 ## 🔍 Integration Guide

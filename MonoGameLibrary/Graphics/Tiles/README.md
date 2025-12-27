@@ -37,47 +37,47 @@ Automatic animation system for tile animations:
 ## Supported Formats
 
 ### JSON Tilemap Format
-Modern approach using texture atlases with animated tile support:
+Modern approach using texture atlases with animated tile support. JSON files now contain arrays of maps:
 
 ```json
-{
-  "name": "level1",
-  "width": 30,
-  "height": 20,
-  "tileWidth": 32,
-  "tileHeight": 32,
-  "orientation": "orthogonal",
-  "atlasFile": "atlas.png",
-  "tilesets": [
-    {
-      "name": "terrain",
-      "firstGid": 1,
-      "atlasSprite": "terrain_tileset",
-      "tileWidth": 32,
-      "tileHeight": 32,
-      "columns": 4,
-      "spacing": 0,
-      "margin": 0,
-      "tiles": [
-        {
-          "id": 0,
-          "type": null,
-          "atlasSprite": null,
-          "animation": [
-            {
-              "tileId": 0,
-              "duration": 100,
-              "sourceX": 0,
-              "sourceY": 0,
-              "sourceWidth": 32,
-              "sourceHeight": 32
-            },
-            {
-              "tileId": 1,
-              "duration": 100,
-              "sourceX": 32,
-              "sourceY": 0,
-              "sourceWidth": 32,
+[
+  {
+    "name": "level1",
+    "width": 30,
+    "height": 20,
+    "tileWidth": 32,
+    "tileHeight": 32,
+    "orientation": "orthogonal",
+    "tilesets": [
+      {
+        "name": "terrain",
+        "firstGid": 1,
+        "atlasSprite": "terrain_tileset",
+        "tileWidth": 32,
+        "tileHeight": 32,
+        "columns": 4,
+        "spacing": 0,
+        "margin": 0,
+        "tiles": [
+          {
+            "id": 0,
+            "type": null,
+            "atlasSprite": null,
+            "animation": [
+              {
+                "tileId": 0,
+                "duration": 100,
+                "sourceX": 0,
+                "sourceY": 0,
+                "sourceWidth": 32,
+                "sourceHeight": 32
+              },
+              {
+                "tileId": 1,
+                "duration": 100,
+                "sourceX": 32,
+                "sourceY": 0,
+                "sourceWidth": 32,
               "sourceHeight": 32
             }
           ]
@@ -91,8 +91,15 @@ Modern approach using texture atlases with animated tile support:
       "tiles": [1, 2, 3, 4, ...]
     }
   ]
-}
+  },
+  {
+    "name": "level2",
+    // Additional map with basic structure
+  }
+]
 ```
+
+**Multiple Maps Support**: JSON files now contain arrays of map objects, allowing multiple related maps to be loaded together. Access maps by name using `tilemaps["mapName"]` or by index using `tilemaps[0]`.
 
 ### Key Features
 
@@ -154,9 +161,13 @@ Modern approach using texture atlases with animated tile support:
 // Load texture atlas once in Scene or Core initialization
 TextureAtlas gameAtlas = TextureAtlas.FromJsonTexture(Content, "atlas.json");
 
-// Load multiple tilemaps using shared atlas
-Tilemap backgroundMap = Tilemap.FromJson(Content, "maps/background.json", gameAtlas);
-Tilemap foregroundMap = Tilemap.FromJson(Content, "maps/foreground.json", gameAtlas);
+// Load multiple tilemap collections using shared atlas
+var backgroundMaps = Tilemap.FromJson(Content, "maps/background.json", gameAtlas);
+var foregroundMaps = Tilemap.FromJson(Content, "maps/foreground.json", gameAtlas);
+
+// Access specific maps by name or index
+Tilemap backgroundMap = backgroundMaps["background"]; // or backgroundMaps[0]
+Tilemap foregroundMap = foregroundMaps["foreground"]; // or foregroundMaps[0]
 
 // In your Update loop - required for animated tiles
 backgroundMap.Update(gameTime);
@@ -222,10 +233,12 @@ Content/
 ├── animations.json        # Animation definitions  
 ├── atlas.png              # Packed texture file
 └── maps/
-    ├── level1.json        # Level 1 tilemap
-    ├── forest.json        # Forest area tilemap
-    └── dungeon.json       # Dungeon tilemap
+    ├── level1.json        # Level 1 tilemaps (array of maps)
+    ├── forest_area.json   # Forest area tilemaps (array of maps)
+    └── dungeon_set.json   # Dungeon tilemaps (array of maps)
 ```
+
+**Multiple Maps Per File**: Each JSON file now contains an array of related maps. For example, `forest_area.json` might contain `["forest_entrance", "forest_clearing", "forest_deep"]` maps that can be accessed individually while sharing the same texture atlas.
 
 ### Integration with TextureAtlas
 The tilemap system integrates seamlessly with the existing TextureAtlas functionality:

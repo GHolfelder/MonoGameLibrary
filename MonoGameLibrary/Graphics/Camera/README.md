@@ -43,12 +43,15 @@ public class GameplayScene : Scene
 {
     private PlayerSprite player;
     private Tilemap tilemap;
+    private TextureAtlas atlas;
 
     public override void LoadContent()
     {
-        // Load your game objects
-        player = new PlayerSprite(atlas, "player", DirectionMode.FourWay);
-        tilemap = Tilemap.FromJson(Content, "level1.json");
+        // Load texture atlas and game objects
+        atlas = TextureAtlas.FromJsonTexture(Content, "sprites.json\");
+        player = new PlayerSprite(atlas, \"player\", DirectionMode.FourWay);
+        var tilemaps = Tilemap.FromJson(Content, \"level1.json\", atlas);
+        tilemap = tilemaps[0]; // or tilemaps[\"mapName\"]
         
         // Configure camera for character size and desired screen coverage
         // IMPORTANT: Use effective rendered size if character is scaled
