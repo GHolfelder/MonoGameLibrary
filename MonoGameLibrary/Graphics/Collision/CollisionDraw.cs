@@ -50,6 +50,18 @@ public static class CollisionDraw
     }
 
     /// <summary>
+    /// Draws a filled rectangle.
+    /// </summary>
+    /// <param name="spriteBatch">The SpriteBatch to use for drawing.</param>
+    /// <param name="rectangle">The rectangle to draw.</param>
+    /// <param name="color">The color to draw with.</param>
+    public static void DrawFilledRectangle(SpriteBatch spriteBatch, Rectangle rectangle, Color color)
+    {
+        EnsurePixelTexture(spriteBatch.GraphicsDevice);
+        spriteBatch.Draw(s_pixelTexture, rectangle, color);
+    }
+
+    /// <summary>
     /// Draws a circle outline using line segments.
     /// </summary>
     /// <param name="spriteBatch">The SpriteBatch to use for drawing.</param>

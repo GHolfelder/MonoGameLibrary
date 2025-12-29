@@ -1260,7 +1260,13 @@ public static class TilemapCollisionExtensions
         if (font != null)
         {
             // Use actual text rendering with SpriteFont and scaling
+            // Compensate for camera zoom to keep text the same size as FPS display
             float fontScale = Core.DebugFontScale;
+            if (Core.Camera != null)
+            {
+                fontScale /= Core.Camera.Zoom; // Inverse scale to compensate for camera zoom
+            }
+            
             Vector2 textSize = font.MeasureString(name) * fontScale;
             float scaledOffset = 5f * fontScale; // Scale the gap between object and text
             Vector2 textPosition = objectPosition + new Vector2(-textSize.X * 0.5f, -textSize.Y - scaledOffset);

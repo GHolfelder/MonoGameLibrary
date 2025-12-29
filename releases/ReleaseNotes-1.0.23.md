@@ -1,9 +1,16 @@
 # MonoGame Library Release Notes - Version 1.0.23
 
-**Release Date**: December 26, 2025  
+**Release Date**: December 29, 2025  
 **Previous Version**: 1.0.22
 
 ## 🎯 Major Features
+
+### Enhanced Developer Mode & FPS System
+- **Improved FPS Display**: Enhanced FPS tracking with 2-decimal precision (e.g., "120.45 fps")
+- **Dynamic Background Sizing**: FPS display background automatically resizes based on text content and font scale
+- **Real-time FPS Tracking**: Accurate frame rate calculation with rolling buffer system
+- **VSync Control**: F3 hotkey to toggle VSync on/off during runtime for performance testing
+- **Responsive Calculations**: Smaller frame buffer (5 frames) for immediate response to FPS changes
 
 ### Multiple Maps Support System
 - **TilemapCollection**: New collection class for managing multiple tilemaps loaded from a single JSON file
@@ -19,6 +26,13 @@
 
 ## 🔧 Technical Improvements
 
+### FPS System Architecture
+- **Fixed FPS Calculation**: Resolved issue where FPS calculation was incomplete, ensuring accurate real-time frame rate display
+- **Always-On Tracking**: FPS tracking now runs continuously, not just in developer mode
+- **Variable Frame Rate Support**: `IsFixedTimeStep = false` allows natural frame rate variations
+- **Production-Ready VSync**: VSync enabled by default for smooth gameplay, with user toggle option
+- **Font Scale Compensation**: Object names (F2) compensate for camera zoom to maintain consistent size with FPS display (F1)
+
 ### Multiple Maps Architecture
 - **TilemapCollection Class**: Dictionary-based storage with case-insensitive map name lookup for efficient access
 - **Array-Only JSON Parsing**: Expects direct JSON arrays containing map objects with clear error messaging for invalid formats
@@ -32,6 +46,30 @@
 - **Performance Optimized**: Efficient collision detection algorithms designed for real-time gameplay
 
 ## 🚀 New Classes & APIs
+
+### Enhanced Core FPS Properties
+```csharp
+// Improved FPS tracking with real-time accuracy
+public static double CurrentFps { get; } // Now shows 2-decimal precision
+public static DebugFontScale { get; set; } // Affects both FPS display and background size
+
+// New developer mode hotkeys
+// F1 - Toggle Developer Mode (shows FPS with precise values)
+// F2 - Toggle Collision Boxes (object names compensate for camera zoom)  
+// F3 - Toggle VSync (runtime performance testing)
+```
+
+### Enhanced Developer Overlay
+```csharp
+protected virtual void DrawDeveloperOverlay()
+{
+    // FPS display with dynamic background sizing
+    // Background automatically resizes based on:
+    // - Text content length ("60.00 fps" vs "120.45 fps")
+    // - DebugFontScale value  
+    // - Collision indicator presence
+}
+```
 
 ### TilemapCollection
 ```csharp
