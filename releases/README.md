@@ -4,6 +4,22 @@ This directory contains detailed release notes for each version of MonoGame Libr
 
 ## Latest Releases
 
+### [Version 1.0.23](ReleaseNotes-1.0.23.md) - December 29, 2025
+**Enhanced Developer Mode, FPS System & Multiple Maps**
+- Enhanced FPS display with 2-decimal precision and dynamic background sizing
+- Real-time FPS tracking with rolling buffer system and VSync control (F3 hotkey)
+- Improved developer overlay with font scale compensation for object names
+- TilemapCollection for managing multiple tilemaps from single JSON files
+- Complete tile collision integration system with PlayerSprite enhancement
+- Fixed FPS calculation issues and production-ready VSync defaults
+
+### [Version 1.0.22](ReleaseNotes-1.0.22.md) - December 14, 2025
+**Animated Tile System**
+- Complete animation framework with AnimatedTile, AnimatedTileFrame, and AnimatedTileInstance classes
+- JSON configuration for animated tiles with customizable frame durations
+- Automatic frame cycling with precise timing and seamless integration
+- Per-layer instance management with memory optimization and smooth performance
+
 ### [Version 1.0.21](ReleaseNotes-1.0.21.md) - November 27, 2025
 **Comprehensive 2D Camera System**
 - Professional-grade camera architecture with position, zoom, rotation, and following capabilities
