@@ -13,6 +13,21 @@ using MonoGameLibrary.Scenes;
 
 namespace MonoGameLibrary;
 
+/// <summary>
+/// Defines the possible positions for FPS display on screen
+/// </summary>
+public enum FpsDisplayPosition
+{
+    UpperLeft,
+    Top,
+    UpperRight,
+    Right,
+    BottomRight,
+    Bottom,
+    BottomLeft,
+    Left
+}
+
 public class Core : Game
 {
     internal static Core s_instance;
@@ -241,6 +256,13 @@ public class Core : Game
     private static SpriteFont s_debugFont = null;
     private static float s_debugFontScale = 1.0f;
     
+    // FPS Display System
+    private static FpsDisplayPosition s_fpsDisplayPosition = FpsDisplayPosition.UpperLeft;
+    private static double[] s_frameTimeBuffer = new double[5]; // Much smaller buffer for immediate response
+    private static int s_frameTimeIndex = 0;
+    private static double s_currentFps = 60.0;
+    private static bool s_frameBufferFilled = false;
+    
     /// <summary>
     /// Gets or sets the font used for developer mode text rendering (collision markers, debug info, etc.).
     /// Can be set to any SpriteFont loaded by the game.
@@ -320,6 +342,40 @@ public class Core : Game
         {
             s_showCollisionBoxes = !s_showCollisionBoxes;
         }
+    }
+    
+    /// <summary>
+    /// Gets or sets the position for FPS display on screen
+    /// </summary>
+    public static FpsDisplayPosition FpsDisplayPosition
+    {
+        get => s_fpsDisplayPosition;
+        set => s_fpsDisplayPosition = value;
+    }
+    
+    /// <summary>
+    /// Gets the current frames per second
+    /// </summary>
+    public static double CurrentFps => s_currentFps;
+    
+    /// <summary>
+    /// Gets the position coordinates for FPS display based on the current FpsDisplayPosition
+    /// </summary>
+    /// <returns>Vector2 coordinates for the specified position</returns>
+    public static Vector2 GetFpsDisplayPosition()
+    {
+        return s_fpsDisplayPosition switch
+        {
+            FpsDisplayPosition.UpperLeft => new Vector2(10, 10),
+            FpsDisplayPosition.Top => new Vector2(950, 10),
+            FpsDisplayPosition.UpperRight => new Vector2(1790, 10),
+            FpsDisplayPosition.Right => new Vector2(1790, 530),
+            FpsDisplayPosition.BottomRight => new Vector2(1790, 1050),
+            FpsDisplayPosition.Bottom => new Vector2(950, 1050),
+            FpsDisplayPosition.BottomLeft => new Vector2(10, 1050),
+            FpsDisplayPosition.Left => new Vector2(10, 530),
+            _ => new Vector2(10, 10)
+        };
     }
 
     /// <summary>
@@ -486,6 +542,13 @@ public class Core : Game
         Graphics.PreferredBackBufferWidth = width;
         Graphics.PreferredBackBufferHeight = height;
         Graphics.IsFullScreen = fullScreen;
+        
+        // Standard production setting: VSync ON by default (user can toggle with F3)
+        Graphics.SynchronizeWithVerticalRetrace = true;
+        
+        // Allow variable frame rates but with VSync limiting
+        IsFixedTimeStep = false;
+        TargetElapsedTime = TimeSpan.FromMilliseconds(1000.0 / 120.0); // 120 FPS target when VSync off
 
         // Apply the graphic presentation changes.
         Graphics.ApplyChanges();
@@ -607,6 +670,9 @@ public class Core : Game
         {
             CameraController.Update(gameTime);
         }
+        
+        // Update FPS tracking (always track, not just in developer mode)
+        UpdateFpsTracking(gameTime);
 
         if (ExitOnEscape && Input.Keyboard.WasKeyJustPressed(Keys.Escape))
         {
@@ -638,6 +704,43 @@ public class Core : Game
         }
 
         base.Draw(gameTime);
+    }
+
+    /// <summary>
+    /// Updates the FPS tracking using a rolling 60-frame average
+    /// </summary>
+    /// <param name="gameTime">Current game time</param>
+    private static void UpdateFpsTracking(GameTime gameTime)
+    {
+        // Store frame time in circular buffer
+        s_frameTimeBuffer[s_frameTimeIndex] = gameTime.ElapsedGameTime.TotalSeconds;
+        s_frameTimeIndex = (s_frameTimeIndex + 1) % s_frameTimeBuffer.Length;
+        
+        // Mark buffer as filled after first complete cycle
+        if (s_frameTimeIndex == 0)
+        {
+            s_frameBufferFilled = true;
+        }
+        
+        // Calculate average frame time
+        int sampleCount = s_frameBufferFilled ? s_frameTimeBuffer.Length : s_frameTimeIndex;
+        if (sampleCount > 0)
+        {
+            double totalTime = 0;
+            for (int i = 0; i < sampleCount; i++)
+            {
+                totalTime += s_frameTimeBuffer[i];
+            }
+            
+            double averageFrameTime = totalTime / sampleCount;
+            s_currentFps = averageFrameTime > 0 ? 1.0 / averageFrameTime : 60.0;
+            
+            // Debug output every 30 frames to verify FPS calculation (show more precision)
+            if (s_frameTimeIndex % 30 == 0 && sampleCount > 5) // Show after 5 samples instead of full buffer
+            {
+                System.Diagnostics.Debug.WriteLine($"FPS Debug - AvgFrameTime: {averageFrameTime:F6}s, FPS: {s_currentFps:F2}, LastFrameTime: {gameTime.ElapsedGameTime.TotalSeconds:F6}s");
+            }
+        }
     }
 
     public static void ChangeScene(Scene next)
