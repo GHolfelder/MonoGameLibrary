@@ -93,6 +93,16 @@ public class CharacterSprite
     public float LayerDepth { get; set; } = 0.0f;
     
     /// <summary>
+    /// Gets the width of the current animation frame, or 0 if no animation is active
+    /// </summary>
+    public int Width => (int)(_currentAnimation?.Width ?? 0);
+
+    /// <summary>
+    /// Gets the height of the current animation frame, or 0 if no animation is active
+    /// </summary>
+    public int Height => (int)(_currentAnimation?.Height ?? 0);
+    
+    /// <summary>
     /// Gets or sets the collision component for this character sprite.
     /// </summary>
     public SpriteCollision Collision
@@ -286,8 +296,7 @@ public class CharacterSprite
     }
 
     /// <summary>
-    /// Sets the origin of this character sprite to the center using typical sprite dimensions.
-    /// Assumes 64x64 sprite size - call CenterOrigin(width, height) for custom sizes.
+    /// Sets the origin of this character sprite to the center using sprite texture size.
     /// </summary>
     /// <remarks>
     /// Note: The origin needs to be set based on the width and height of the source texture region itself, 
@@ -295,7 +304,7 @@ public class CharacterSprite
     /// </remarks>
     public virtual void CenterOrigin()
     {
-        CenterOrigin(64f, 64f);
+        CenterOrigin(Width, Height);
     }
 
     /// <summary>

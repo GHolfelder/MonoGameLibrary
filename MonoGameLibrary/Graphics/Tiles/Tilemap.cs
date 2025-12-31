@@ -1121,14 +1121,48 @@ public class Tilemap
     /// Gets collision objects from a specific object layer or all object layers.
     /// </summary>
     /// <param name="layerName">The name of the object layer, or null to get objects from all layers.</param>
-    /// <returns>List of collision objects from the specified layer(s).</returns>
-    public List<CollisionObject> GetCollisionObjects(string layerName = null)
+    /// <param name="objectName">The name of the object to filter by, or null to get all objects.</param>
+    /// <returns>List of collision objects from the specified layer(s) matching the object name filter.</returns>
+    public List<CollisionObject> GetCollisionObjects(string layerName = null, string objectName = null)
     {
-        if (string.IsNullOrEmpty(layerName))
-            return _objectLayers.SelectMany(layer => layer.Objects).ToList();
+        List<CollisionObject> objects;
         
-        var layer = GetObjectLayer(layerName);
-        return layer?.Objects ?? new List<CollisionObject>();
+        if (string.IsNullOrEmpty(layerName))
+            objects = _objectLayers.SelectMany(layer => layer.Objects).ToList();
+        else
+        {
+            var layer = GetObjectLayer(layerName);
+            objects = layer?.Objects ?? new List<CollisionObject>();
+        }
+        
+        if (!string.IsNullOrEmpty(objectName))
+            objects = objects.Where(obj => string.Equals(obj.Name, objectName, StringComparison.OrdinalIgnoreCase)).ToList();
+        
+        return objects;
+    }
+
+    /// <summary>
+    /// Finds the first collision object from a specific object layer or all object layers.
+    /// </summary>
+    /// <param name="layerName">The name of the object layer, or null to search all layers.</param>
+    /// <param name="objectName">The name of the object to find, or null to get the first object.</param>
+    /// <returns>The first collision object matching the criteria, or null if no match is found.</returns>
+    public CollisionObject FindFirstCollisionObject(string layerName = null, string objectName = null)
+    {
+        IEnumerable<CollisionObject> objects;
+        
+        if (string.IsNullOrEmpty(layerName))
+            objects = _objectLayers.SelectMany(layer => layer.Objects);
+        else
+        {
+            var layer = GetObjectLayer(layerName);
+            objects = layer?.Objects ?? Enumerable.Empty<CollisionObject>();
+        }
+        
+        if (!string.IsNullOrEmpty(objectName))
+            return objects.FirstOrDefault(obj => string.Equals(obj.Name, objectName, StringComparison.OrdinalIgnoreCase));
+        
+        return objects.FirstOrDefault();
     }
 
     /// <summary>
