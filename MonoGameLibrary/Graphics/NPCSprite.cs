@@ -12,7 +12,6 @@ public class NPCSprite : CharacterSprite
 {
     private IAIBehavior _aiBehavior;
     private float _movementSpeed = 80f; // pixels per second (slightly slower than player)
-    private Vector2 _velocity = Vector2.Zero;
     private bool _isMoving = false;
 
     /// <summary>
@@ -37,11 +36,6 @@ public class NPCSprite : CharacterSprite
     /// Gets whether the NPC is currently moving
     /// </summary>
     public bool IsMoving => _isMoving;
-
-    /// <summary>
-    /// Gets the current velocity of the NPC
-    /// </summary>
-    public Vector2 Velocity => _velocity;
 
     /// <summary>
     /// Creates a new NPCSprite
@@ -77,7 +71,6 @@ public class NPCSprite : CharacterSprite
             }
             else
             {
-                _velocity = Vector2.Zero;
                 _isMoving = false;
             }
 
@@ -96,11 +89,9 @@ public class NPCSprite : CharacterSprite
         // Convert direction to movement vector
         Vector2 movementVector = GetMovementVectorFromDirection(direction);
 
-        // Calculate velocity
-        _velocity = movementVector * _movementSpeed;
-
-        // Update position
-        Position += _velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
+        // Calculate movement delta and update position directly
+        Vector2 deltaMovement = movementVector * _movementSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Position += deltaMovement;
     }
 
     /// <summary>
@@ -136,9 +127,8 @@ public class NPCSprite : CharacterSprite
     /// </summary>
     public void Stop()
     {
-        _velocity = Vector2.Zero;
         _isMoving = false;
-    SetAnimationState(AnimationState.Idle);
+        SetAnimationState(AnimationState.Idle);
     }
 
     /// <summary>
