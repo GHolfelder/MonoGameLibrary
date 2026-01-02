@@ -26,6 +26,9 @@ public class CharacterSprite
     protected AnimatedSprite _currentAnimation;
     
     private SpriteCollision _collision;
+    private Vector2 _velocity = Vector2.Zero;
+    private Vector2 _previousPosition = Vector2.Zero;
+    private bool _hasInitialPosition = false;
 
     // Debug property to force placeholder display
     public bool ForceShowPlaceholder { get; set; } = false;
@@ -114,6 +117,11 @@ public class CharacterSprite
     public string CurrentState => _currentState;
     public Direction8 CurrentDirection => _currentDirection;
     public bool CurrentAnimationExists => _currentAnimation != null;
+    
+    /// <summary>
+    /// Gets the current velocity of the character sprite in pixels per second
+    /// </summary>
+    public Vector2 Velocity => _velocity;
 
     /// <summary>
     /// Creates a new CharacterSprite using a TextureAtlas (convenience constructor)
@@ -278,7 +286,28 @@ public class CharacterSprite
     /// </summary>
     public virtual void Update(GameTime gameTime)
     {
+        UpdateVelocity(gameTime);
         _currentAnimation?.Update(gameTime);
+    }
+    
+    /// <summary>
+    /// Updates velocity tracking based on position changes
+    /// </summary>
+    protected virtual void UpdateVelocity(GameTime gameTime)
+    {
+        if (_hasInitialPosition && gameTime.ElapsedGameTime.TotalSeconds > 0)
+        {
+            // Calculate velocity from position change
+            Vector2 deltaPosition = Position - _previousPosition;
+            _velocity = deltaPosition / (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+        else
+        {
+            _velocity = Vector2.Zero;
+            _hasInitialPosition = true;
+        }
+        
+        _previousPosition = Position;
     }
 
     /// <summary>
