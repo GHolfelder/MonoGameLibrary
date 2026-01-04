@@ -514,6 +514,185 @@ public static class TilemapCollisionExtensions
     }
 
     /// <summary>
+    /// Gets the first collision object that intersects with the character sprite in the specified object layer.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check collision against.</param>
+    /// <param name="characterSprite">The character sprite to check collision for.</param>
+    /// <param name="spritePosition">The character sprite's world position.</param>
+    /// <param name="objectLayerName">The name of the object layer to check against.</param>
+    /// <param name="objectName">Optional: Name of specific object to check against, or null for any object.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>The first collision object that intersects with the sprite, or null if no collision.</returns>
+    public static CollisionObject GetFirstCollidingTileObject(this Tilemap tilemap, CharacterSprite characterSprite,
+        Vector2 spritePosition, string objectLayerName, string objectName = null, Vector2 tilemapPosition = default)
+    {
+        if (characterSprite.Collision == null) return null;
+
+        var objectLayer = tilemap.GetObjectLayer(objectLayerName);
+        if (objectLayer == null || !objectLayer.Visible) return null;
+
+        foreach (var collisionObject in objectLayer.Objects)
+        {
+            // Filter by object name if specified
+            if (!string.IsNullOrEmpty(objectName) && 
+                !string.Equals(collisionObject.Name, objectName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // Calculate object's world position
+            Vector2 objectWorldPosition = tilemapPosition + collisionObject.Position;
+
+            // Get or create cached collision shape
+            var objectCollisionShape = GetCachedCollisionShape(collisionObject);
+            if (objectCollisionShape == null) continue; // Skip unsupported shapes
+
+            // Special handling for polylines
+            if (collisionObject.ShapeType == CollisionObjectType.Polyline)
+            {
+                if (CheckPolylineCollision(characterSprite, spritePosition, collisionObject, objectWorldPosition))
+                {
+                    return collisionObject;
+                }
+                continue;
+            }
+
+            var objectCollision = new SpriteCollision(objectCollisionShape);
+            if (characterSprite.Collision.Intersects(spritePosition, objectCollision, objectWorldPosition))
+            {
+                return collisionObject;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets all collision objects that intersect with the character sprite in the specified object layer.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to check collision against.</param>
+    /// <param name="characterSprite">The character sprite to check collision for.</param>
+    /// <param name="spritePosition">The character sprite's world position.</param>
+    /// <param name="objectLayerName">The name of the object layer to check against.</param>
+    /// <param name="objectName">Optional: Name of specific object to check against, or null for any object.</param>
+    /// <param name="tilemapPosition">The tilemap's world position.</param>
+    /// <returns>List of collision objects that intersect with the sprite.</returns>
+    public static List<CollisionObject> GetAllCollidingTileObjects(this Tilemap tilemap, CharacterSprite characterSprite,
+        Vector2 spritePosition, string objectLayerName, string objectName = null, Vector2 tilemapPosition = default)
+    {
+        var collidingObjects = new List<CollisionObject>();
+
+        if (characterSprite.Collision == null) return collidingObjects;
+
+        var objectLayer = tilemap.GetObjectLayer(objectLayerName);
+        if (objectLayer == null || !objectLayer.Visible) return collidingObjects;
+
+        foreach (var collisionObject in objectLayer.Objects)
+        {
+            // Filter by object name if specified
+            if (!string.IsNullOrEmpty(objectName) && 
+                !string.Equals(collisionObject.Name, objectName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // Calculate object's world position
+            Vector2 objectWorldPosition = tilemapPosition + collisionObject.Position;
+
+            // Get or create cached collision shape
+            var objectCollisionShape = GetCachedCollisionShape(collisionObject);
+            if (objectCollisionShape == null) continue; // Skip unsupported shapes
+
+            // Special handling for polylines
+            if (collisionObject.ShapeType == CollisionObjectType.Polyline)
+            {
+                if (CheckPolylineCollision(characterSprite, spritePosition, collisionObject, objectWorldPosition))
+                {
+                    collidingObjects.Add(collisionObject);
+                }
+                continue;
+            }
+
+            var objectCollision = new SpriteCollision(objectCollisionShape);
+            if (characterSprite.Collision.Intersects(spritePosition, objectCollision, objectWorldPosition))
+            {
+                collidingObjects.Add(collisionObject);
+            }
+        }
+
+        return collidingObjects;
+    }
+
+    /// <summary>
+    /// Gets or creates a cached collision shape for the collision object.
+    /// Uses lazy initialization for performance optimization.
+    /// </summary>
+    /// <param name="collisionObject">The collision object to get the shape for.</param>
+    /// <returns>The cached collision shape, or null for unsupported types.</returns>
+    private static ICollisionShape GetCachedCollisionShape(CollisionObject collisionObject)
+    {
+        // Return cached shape if already created
+        if (collisionObject._cachedCollisionShape != null)
+            return collisionObject._cachedCollisionShape;
+
+        // Create and cache the collision shape
+        ICollisionShape shape = collisionObject.ShapeType switch
+        {
+            CollisionObjectType.Rectangle => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero),
+            CollisionObjectType.Ellipse when collisionObject.IsCircle => new CollisionCircle(collisionObject.Radius, Vector2.Zero),
+            CollisionObjectType.Ellipse => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Fallback to rectangle for ellipse
+            CollisionObjectType.Point => new CollisionCircle(1f, Vector2.Zero), // Small circle for point
+            CollisionObjectType.Polygon => CreatePolygonCollisionShape(collisionObject),
+            CollisionObjectType.Tile => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for tile objects
+            CollisionObjectType.Text => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero), // Rectangle for text objects
+            CollisionObjectType.Polyline => null, // Special handling elsewhere
+            _ => new CollisionRectangle(collisionObject.Width, collisionObject.Height, Vector2.Zero)
+        };
+
+        collisionObject._cachedCollisionShape = shape;
+        return shape;
+    }
+
+    /// <summary>
+    /// Clears the cached collision shape for a collision object.
+    /// Call this when the object's properties change to ensure cache consistency.
+    /// </summary>
+    /// <param name="collisionObject">The collision object to clear the cache for.</param>
+    public static void ClearCollisionShapeCache(this CollisionObject collisionObject)
+    {
+        collisionObject._cachedCollisionShape = null;
+    }
+
+    /// <summary>
+    /// Clears the cached collision shapes for all objects in the specified tilemap.
+    /// Call this when objects are modified to ensure cache consistency.
+    /// </summary>
+    /// <param name="tilemap">The tilemap to clear collision caches for.</param>
+    /// <param name="objectLayerName">Optional: Name of specific object layer to clear, or null for all layers.</param>
+    public static void ClearAllCollisionShapeCache(this Tilemap tilemap, string objectLayerName = null)
+    {
+        if (string.IsNullOrEmpty(objectLayerName))
+        {
+            // Clear cache for all object layers
+            foreach (var layer in tilemap.ObjectLayers)
+            {
+                foreach (var obj in layer.Objects)
+                {
+                    obj.ClearCollisionShapeCache();
+                }
+            }
+        }
+        else
+        {
+            // Clear cache for specific layer
+            var layer = tilemap.GetObjectLayer(objectLayerName);
+            if (layer != null)
+            {
+                foreach (var obj in layer.Objects)
+                {
+                    obj.ClearCollisionShapeCache();
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Draws a polygon outline using line segments (closed shape).
     /// </summary>
     private static void DrawPolygonOutline(SpriteBatch spriteBatch, Vector2[] points, Vector2 offset, Color color)
