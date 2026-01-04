@@ -2,6 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameLibrary.Utilities;
 
 namespace MonoGameLibrary.Scenes;
 
@@ -106,67 +107,8 @@ public abstract class Scene : IDisposable
     /// </summary>
     protected virtual void DrawDeveloperOverlay()
     {
-        if (Core.DeveloperMode && Core.DebugFont != null)
-        {
-            // Begin a separate SpriteBatch session for developer overlay using virtual coordinates
-            Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
-            
-            // Get base position for the display
-            var basePosition = Core.GetFpsDisplayPosition();
-            
-            // Prepare FPS text and measure its size for dynamic background sizing
-            var fpsText = $"{Core.CurrentFps:F2} fps";
-            float fontScale = Core.DebugFontScale;
-            Vector2 textSize = Core.DebugFont.MeasureString(fpsText) * fontScale;
-            
-            // Calculate background size based on text dimensions with padding
-            int padding = 10;
-            int backgroundHeight = (int)textSize.Y + padding;
-            if (Core.ShowCollisionBoxes)
-            {
-                backgroundHeight += 45; // Add space for collision indicator
-            }
-            
-            // Draw semi-transparent background sized to fit content
-            var backgroundRect = new Rectangle(
-                (int)(basePosition.X - 5), 
-                (int)(basePosition.Y - 5), 
-                (int)(textSize.X + padding), 
-                backgroundHeight);
-            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawFilledRectangle(
-                Core.SpriteBatch, backgroundRect, Color.Black * 0.5f);
-            
-            // Draw FPS text at base position using same scale as object names
-            Core.SpriteBatch.DrawString(Core.DebugFont, fpsText, basePosition, Color.White, 
-                0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
-            
-            // Draw yellow square indicator 50px below FPS text when collision boxes enabled
-            // (enlarged from 12x12 to 16x16)
-            if (Core.ShowCollisionBoxes)
-            {
-                var squarePosition = new Vector2(basePosition.X + 12, basePosition.Y + 50);
-                var rect = new Rectangle((int)squarePosition.X, (int)squarePosition.Y, 16, 16);
-                MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawFilledRectangle(
-                    Core.SpriteBatch, rect, Color.Yellow);
-            }
-            
-            Core.SpriteBatch.End();
-        }
-        else if (Core.DeveloperMode && Core.ShowCollisionBoxes)
-        {
-            // Fallback for when no debug font is set - just draw collision indicator
-            Core.SpriteBatch.Begin(transformMatrix: Core.ScaleMatrix);
-            
-            var basePosition = Core.GetFpsDisplayPosition();
-            
-            // Draw yellow square indicator when collision boxes enabled
-            var squarePosition = new Vector2(basePosition.X + 12, basePosition.Y + 10);
-            var rect = new Rectangle((int)squarePosition.X, (int)squarePosition.Y, 16, 16);
-            MonoGameLibrary.Graphics.Collision.CollisionDraw.DrawFilledRectangle(
-                Core.SpriteBatch, rect, Color.Yellow);
-            
-            Core.SpriteBatch.End();
-        }
+        // Use the centralized debug system for drawing
+        DebugSystem.DrawDebugOverlay(Core.SpriteBatch, Core.GetFpsDisplayPosition(), Core.CurrentFps, Core.ScaleMatrix);
     }
 
     /// <summary>

@@ -10,6 +10,7 @@ using MonoGameLibrary.Graphics.Camera;
 using MonoGameLibrary.Graphics.Collision;
 using MonoGameLibrary.Input;
 using MonoGameLibrary.Scenes;
+using MonoGameLibrary.Utilities;
 
 namespace MonoGameLibrary;
 
@@ -251,11 +252,6 @@ public class Core : Game
         }
     }
 
-    private static bool s_developerMode = false;
-    private static bool s_showCollisionBoxes = false;
-    private static SpriteFont s_debugFont = null;
-    private static float s_debugFontScale = 1.0f;
-    
     // FPS Display System
     private static FpsDisplayPosition s_fpsDisplayPosition = FpsDisplayPosition.UpperLeft;
     private static double[] s_frameTimeBuffer = new double[5]; // Much smaller buffer for immediate response
@@ -269,8 +265,8 @@ public class Core : Game
     /// </summary>
     public static SpriteFont DebugFont
     {
-        get => s_debugFont;
-        set => s_debugFont = value;
+        get => DebugSystem.DebugFont;
+        set => DebugSystem.DebugFont = value;
     }
     
     /// <summary>
@@ -279,24 +275,8 @@ public class Core : Game
     /// </summary>
     public static float DebugFontScale
     {
-        get => s_debugFontScale;
-        set => s_debugFontScale = Math.Max(0.1f, value); // Prevent negative or zero scaling
-    }
-    
-    /// <summary>
-    /// Gets whether the application is running in debug mode
-    /// </summary>
-    private static bool IsDebugMode
-    {
-        get
-        {
-            bool isDebug = false;
-#if DEBUG
-            isDebug = true;
-#endif
-            // Also check if debugger is attached (covers game in debug mode)
-            return isDebug || System.Diagnostics.Debugger.IsAttached;
-        }
+        get => DebugSystem.DebugFontScale;
+        set => DebugSystem.DebugFontScale = value;
     }
     
     /// <summary>
@@ -304,8 +284,8 @@ public class Core : Game
     /// </summary>
     public static bool DeveloperMode
     {
-        get => IsDebugMode && s_developerMode;
-        set { if (IsDebugMode) s_developerMode = value; }
+        get => DebugSystem.DeveloperMode;
+        set => DebugSystem.DeveloperMode = value;
     }
     
     /// <summary>
@@ -313,24 +293,30 @@ public class Core : Game
     /// </summary>
     public static bool ShowCollisionBoxes
     {
-        get => IsDebugMode && s_showCollisionBoxes && s_developerMode;
-        set { if (IsDebugMode) s_showCollisionBoxes = value; }
+        get => DebugSystem.ShowCollisionBoxes;
+        set => DebugSystem.ShowCollisionBoxes = value;
     }
+    
+    /// <summary>
+    /// Gets or sets whether debug messages should be displayed
+    /// </summary>
+    public static bool ShowDebugMessages
+    {
+        get => DebugSystem.ShowDebugMessages;
+        set => DebugSystem.ShowDebugMessages = value;
+    }
+    
+    /// <summary>
+    /// Gets the current list of debug messages
+    /// </summary>
+    public static IReadOnlyList<DebugSystem.DebugMessage> DebugMessages => DebugSystem.DebugMessages;
     
     /// <summary>
     /// Toggles developer mode and all associated debug features (only works in debug mode)
     /// </summary>
     public static void ToggleDeveloperMode()
     {
-        if (IsDebugMode)
-        {
-            s_developerMode = !s_developerMode;
-            if (!s_developerMode)
-            {
-                // Turn off all debug features when exiting dev mode
-                s_showCollisionBoxes = false;
-            }
-        }
+        DebugSystem.ToggleDeveloperMode();
     }
     
     /// <summary>
@@ -338,10 +324,16 @@ public class Core : Game
     /// </summary>
     public static void ToggleCollisionBoxes()
     {
-        if (IsDebugMode && s_developerMode)
-        {
-            s_showCollisionBoxes = !s_showCollisionBoxes;
-        }
+        DebugSystem.ToggleCollisionBoxes();
+    }
+    
+    /// <summary>
+    /// Adds a debug message to the centralized debug messaging system
+    /// </summary>
+    /// <param name="message">The message to add</param>
+    public static void AddDebugMessage(string message)
+    {
+        DebugSystem.AddDebugMessage(message);
     }
     
     /// <summary>
