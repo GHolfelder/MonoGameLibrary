@@ -12,13 +12,13 @@ This is a **MonoGame utility library** providing a higher-level API over MonoGam
 
 ### Key Subsystems
 - **Graphics**: Texture atlases, sprites, animations with XML/JSON-driven configuration
-- **Graphics.Tiles**: Tilemaps and tilesets with XML/JSON-driven configuration
+- **Graphics.Tiles**: Tilemaps and tilesets with XML/JSON-driven configuration, TilemapCollection for multiple maps, animated tiles
 - **Graphics.Collision**: Enhanced collision detection with shape caching and tile object support
 - **Input**: Centralized input handling with previous/current state tracking for edge detection
 - **Audio**: Sound effect instance management with automatic cleanup
 - **Scenes**: Base scene class with per-scene content managers for automatic resource cleanup
 - **Managers**: Room management system with spatial partitioning and exit detection
-- **Utilities**: Spatial data structures (QuadTree) and debugging tools
+- **Utilities**: Spatial data structures (QuadTree), debugging tools, and enhanced FPS system
 
 ## Critical Development Patterns
 
@@ -88,9 +88,26 @@ Both `TextureAtlas` and `Tilemap` use **XML-based configuration** loaded via `Fr
 ```
 
 ### JSON Configuration System
-`TextureAtlas` and `Tilemap` support **JSON-based configuration** for modern workflows:
+Both `TextureAtlas` and `Tilemap` use **JSON-based configuration** for modern workflows:
 
 ```json
+// TilemapCollection - Multiple maps in single JSON file
+[
+  {
+    "name": "level1",
+    "width": 30, "height": 20,
+    "tileWidth": 32, "tileHeight": 32,
+    "tilesets": [...],
+    "tileLayers": [...]
+  },
+  {
+    "name": "level2", 
+    "width": 25, "height": 15,
+    "tilesets": [...],
+    "tileLayers": [...]
+  }
+]
+
 // Tilemap object layer with trigger configuration
 {
   "objectLayers": [
@@ -131,8 +148,10 @@ quadTree.Query(playerPosition, searchRadius, results);
 ```
 
 ### Loading Methods
-- **Combined files**: `FromXml(content, fileName)` or `FromJson(content, textureFile, animationFile)`
-- **Separate files**: `FromXmlTexture()` + `LoadAnimationsFromXml()` or `FromJsonTexture()` + `LoadAnimationsFromJson()`
+- **Multiple maps**: `FromJson(content, fileName, textureAtlas)` returns `TilemapCollection` for array-based JSON
+- **Map access**: Access via collection indexers: `maps["mapName"]` or `maps[0]`
+- **Safe access**: `TryGetMap(mapName, out tilemap)` for error-safe retrieval
+- **Combined atlas**: Single `TextureAtlas` shared across all maps in collection
 
 ### Input State Management
 All input classes follow **previous/current state pattern** for edge detection:
@@ -171,10 +190,19 @@ dotnet test
 
 ## Development Guidelines
 
-### When Adding New Graphics Features
+### When Adding Graphics Features
 - Follow the `TextureRegion` → `Sprite` → specialized class hierarchy
 - Implement `Draw()` methods that accept `SpriteBatch` parameter
 - Use consistent property patterns (`Color`, `Rotation`, `Scale`, `Origin`, etc.)
+- For tilemaps, use TilemapCollection pattern for multiple maps
+- Support animated tiles with frame-based animation system
+
+### When Adding FPS and Debug Features
+- Use DebugSystem for centralized debug functionality
+- Support F1/F2/F3 developer mode hotkeys for runtime debugging
+- Implement dynamic background sizing for FPS display
+- Use precise FPS calculation with small frame buffers for responsiveness
+- Support VSync toggle for performance testing
 
 ### When Adding Collision Detection Features
 - Extend `ICollisionShape` interface for new collision shapes
@@ -182,6 +210,8 @@ dotnet test
 - Use caching pattern: check for cached shape before creating new ones
 - Support both individual and batch collision detection
 - Follow naming convention: `GetFirstColliding...()` and `GetAllColliding...()`
+- Use extension method pattern like TilemapCollisionExtensions for discoverability
+- Integrate with PlayerSprite for tile-based collision detection
 
 ### When Adding Room Management Features
 - Extend `RoomManagerBase` abstract class for new room managers

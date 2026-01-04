@@ -303,7 +303,14 @@ Add the MonoGame Library project to your solution and reference it from your gam
 Track the evolution of MonoGame Library through our detailed release notes:
 
 ### Current Version
-- **[Version 1.0.23](releases/ReleaseNotes-1.0.23.md)** *(Latest)* - Enhanced Developer Mode, FPS System & Multiple Maps
+- **[Version 1.0.24](releases/ReleaseNotes-1.0.24.md)** *(Latest)* - Enhanced Character System, Debug Messages & Room Management
+  - **Character Velocity Exposure**: `CharacterSprite.Velocity` property now publicly accessible for movement tracking and game logic
+  - **Enhanced Debug System**: New `DebugSystem.AddDebugMessage()` with automatic deduplication and overlay integration
+  - **Professional Room Management**: `RoomManagerBase` and `RoomManager` classes for seamless room transitions with spatial optimization
+  - **QuadTree Integration**: Efficient exit detection for large maps with many transition points
+
+### Previous Releases
+- **[Version 1.0.23](releases/ReleaseNotes-1.0.23.md)** - Enhanced Developer Mode, FPS System & Multiple Maps
   - **Multiple Maps Support**: TilemapCollection for loading and managing multiple tilemaps from single JSON files
   - **Flexible JSON Formats**: Support for both object-based and array-based multiple map JSON structures
   - **Tile Collision Integration**: PlayerSprite integration with tilemap collision detection via TilemapCollisionExtensions

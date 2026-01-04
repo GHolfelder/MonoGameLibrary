@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>MonoGameLibrary</PackageId>
-    <Version>1.0.23</Version>
+    <Version>1.0.24</Version>
     <Authors>MonoGame Library Contributors</Authors>
     <Description>A comprehensive utility library for MonoGame development, providing graphics, input, audio, and scene management utilities with automatic resource management.</Description>
     <PackageTags>MonoGame;GameDevelopment;Graphics;Animation;Input;Audio;Scene;Utilities</PackageTags>
