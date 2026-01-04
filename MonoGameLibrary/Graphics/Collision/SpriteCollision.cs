@@ -79,4 +79,26 @@ public class SpriteCollision
             Shape.Draw(spriteBatch, worldPosition, DrawColor);
         }
     }
+
+    /// <summary>
+    /// Checks if this sprite collision intersects with a rectangular tile bounds.
+    /// </summary>
+    /// <param name="worldPosition">The world position of this sprite.</param>
+    /// <param name="tileBounds">The bounds of the tile to test against.</param>
+    /// <returns>True if this collision shape intersects with the tile bounds, false otherwise.</returns>
+    public bool IntersectsRectangle(Vector2 worldPosition, Rectangle tileBounds)
+    {
+        return Shape.IntersectsRectangle(worldPosition, tileBounds);
+    }
+
+    /// <summary>
+    /// Checks if this sprite collision contains a specific point.
+    /// </summary>
+    /// <param name="worldPosition">The world position of this sprite.</param>
+    /// <param name="point">The point to test.</param>
+    /// <returns>True if the collision shape contains the point, false otherwise.</returns>
+    public bool ContainsPoint(Vector2 worldPosition, Vector2 point)
+    {
+        return Shape.ContainsPoint(worldPosition, point);
+    }
 }
