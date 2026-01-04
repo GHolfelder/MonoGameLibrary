@@ -6,7 +6,6 @@ using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGameLibrary.Graphics.Collision;
 
 namespace MonoGameLibrary.Graphics.Tiles;
 
@@ -241,12 +240,6 @@ public class CollisionObject
     public Dictionary<string, object> Properties { get; set; } = new();
     public string TextContent { get; set; } = string.Empty;
     public int Gid { get; set; } = 0; // Tile GID for tile objects
-    
-    /// <summary>
-    /// Cached collision shape for performance optimization.
-    /// Created lazily on first collision detection.
-    /// </summary>
-    internal ICollisionShape _cachedCollisionShape;
     
     /// <summary>
     /// Gets the radius for circular/elliptical objects (uses Width as diameter).

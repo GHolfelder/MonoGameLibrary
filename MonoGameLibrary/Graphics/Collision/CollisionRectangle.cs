@@ -96,30 +96,6 @@ public class CollisionRectangle : ICollisionShape
     }
 
     /// <summary>
-    /// Tests if this collision rectangle intersects with another rectangle.
-    /// </summary>
-    /// <param name="worldPosition">The world position of this rectangle.</param>
-    /// <param name="rectangle">The rectangle to test against.</param>
-    /// <returns>True if intersection occurs, false otherwise.</returns>
-    public bool IntersectsRectangle(Vector2 worldPosition, Rectangle rectangle)
-    {
-        var bounds = GetBounds(worldPosition);
-        return bounds.Intersects(rectangle);
-    }
-
-    /// <summary>
-    /// Tests if this collision rectangle contains a specific point.
-    /// </summary>
-    /// <param name="worldPosition">The world position of this rectangle.</param>
-    /// <param name="point">The point to test.</param>
-    /// <returns>True if the rectangle contains the point, false otherwise.</returns>
-    public bool ContainsPoint(Vector2 worldPosition, Vector2 point)
-    {
-        var bounds = GetBounds(worldPosition);
-        return bounds.Contains((int)point.X, (int)point.Y);
-    }
-
-    /// <summary>
     /// Helper method to check if a circle intersects with a rectangle.
     /// </summary>
     private static bool CircleRectangleIntersection(CollisionCircle circle, Vector2 circleWorldPos, Rectangle rect)

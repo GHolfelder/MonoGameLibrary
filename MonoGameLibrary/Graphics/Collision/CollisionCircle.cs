@@ -115,28 +115,4 @@ public class CollisionCircle : ICollisionShape
 
         return distance <= circle.Radius;
     }
-
-    /// <summary>
-    /// Tests if this collision circle intersects with a rectangle.
-    /// </summary>
-    /// <param name="worldPosition">The world position of this circle.</param>
-    /// <param name="rectangle">The rectangle to test against.</param>
-    /// <returns>True if intersection occurs, false otherwise.</returns>
-    public bool IntersectsRectangle(Vector2 worldPosition, Rectangle rectangle)
-    {
-        return CircleRectangleIntersection(this, worldPosition, rectangle);
-    }
-
-    /// <summary>
-    /// Tests if this collision circle contains a specific point.
-    /// </summary>
-    /// <param name="worldPosition">The world position of this circle.</param>
-    /// <param name="point">The point to test.</param>
-    /// <returns>True if the circle contains the point, false otherwise.</returns>
-    public bool ContainsPoint(Vector2 worldPosition, Vector2 point)
-    {
-        var center = worldPosition + Offset;
-        var distance = Vector2.Distance(center, point);
-        return distance <= Radius;
-    }
 }
