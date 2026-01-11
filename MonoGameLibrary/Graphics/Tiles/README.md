@@ -2,37 +2,62 @@
 
 The `MonoGameLibrary.Graphics.Tiles` namespace provides comprehensive tilemap and tileset functionality for 2D games, with support for both traditional XML workflows and modern JSON-based texture atlas integration. This includes automatic support for animated tiles that require no changes to existing game code.
 
-## Core Classes
+## Modular Architecture
 
-### Tilemap
-The main tilemap class supporting multiple rendering approaches:
+The tilemap system has been refactored into focused, single-responsibility modules for better maintainability and discoverability:
 
-- **JSON-based loading** with texture atlas integration
-- **Multi-layer support** for professional z-ordering
-- **Proper depth rendering** for characters behind walls/trees
-- **Layer management** with visibility and opacity controls
-- **Animated tile support** with automatic frame cycling
+### Core Classes
 
-### Tileset & SpacedTileset
+#### Tilemap (Tilemap.cs)
+The main tilemap class handling core functionality:
+- **Rendering methods**: `Draw()`, `DrawLayer()`, `DrawLayersUpTo()`, `DrawLayersFrom()`
+- **Layer access**: `GetLayerByName()`, `GetLayerByIndex()`, `GetObjectLayer()`
+- **Animation management**: `Update()`, `CreateAnimatedTileInstances()`
+- **Data access**: `GetCollisionObjects()`, `FindFirstCollisionObject()`
+- **Core properties**: Map dimensions, tile sizes, scaling, background color
+
+#### Tilemap JSON Loader (Tilemap.JsonLoader.cs)
+JSON parsing functionality as partial class:
+- **Static factory methods**: `FromJson()` for loading tilemap collections
+- **JSON parsing**: Map, tileset, layer, and object parsing
+- **Format validation**: Array-based JSON structure handling
+- **Color parsing**: Hex color string conversion
+
+#### TilemapCollection (TilemapCollection.cs)
+Collection management for multiple tilemaps:
+- **Map storage**: Dictionary-based storage with case-insensitive keys
+- **Access patterns**: By name `collection["mapName"]` or index `collection[0]`
+- **Safe retrieval**: `TryGetMap()` for error-safe access
+- **Enumeration**: `MapNames` property and `Count` for iteration
+
+#### Animation System (AnimatedTile.cs)
+Frame-based tile animation components:
+- **AnimatedTileFrame**: Individual animation frames with timing and source coordinates
+- **AnimatedTile**: Tile definition with animation sequence and properties
+- **AnimatedTileInstance**: Per-instance animation state management with atlas region support
+
+#### Layer Data Structures (TileLayer.cs)
+Tile layer and data definitions:
+- **TileLayer**: Layer properties (name, dimensions, opacity, visibility, offset, tile data)
+- **TileData**: Tile-specific data including collision objects and custom properties
+
+#### Object System (ObjectLayer.cs)
+Object layer and collision object definitions:
+- **CollisionObjectType**: Enumeration of supported shapes (Rectangle, Ellipse, Point, Polygon, Polyline, Tile, Text)
+- **CollisionObject**: Object properties, geometry, rotation, custom properties, cached collision shapes
+- **ObjectLayer**: Object container with layer properties and object collections
+
+#### Tileset Definitions (TilesetDefinition.cs)
+Tileset structure and metadata:
+- **TilesetDefinition**: Tileset properties (name, GID range, dimensions, atlas sprite reference, tile definitions)
+
+### Legacy Support
+
+#### Tileset & SpacedTileset
 Tileset implementations supporting various layout formats:
-
 - **Tileset**: Standard evenly-spaced tile grids
 - **SpacedTileset**: Handles spacing and margins between tiles
 - **ITileset Interface**: Common interface for seamless switching
-
-### TileLayer
-Represents individual tile layers with:
-
-- Layer properties (name, visibility, opacity, offset)
-- Tile data arrays with global ID references
-- Custom properties and metadata support
-
-### Animated Tiles
-Automatic animation system for tile animations:
-
-- **AnimatedTile**: Defines tiles with animation frames
-- **AnimatedTileFrame**: Individual animation frames with timing
-- **AnimatedTileInstance**: Manages animation state per tile instance
 
 ## Supported Formats
 
@@ -410,15 +435,31 @@ This is essential for tilesets exported from tools like Tiled Map Editor or when
 
 ## Architecture Notes
 
-This JSON-based tilemap system provides:
+This modular tilemap system provides:
 
+### **Modular Design Benefits**
+- **Single responsibility**: Each class handles one specific concern (rendering, data, animation, JSON parsing)
+- **Maintainability**: Changes to JSON parsing won't affect rendering code
+- **Discoverability**: Developers can find specific functionality easily in focused files
+- **Testability**: Individual components can be tested in isolation
+- **API preservation**: All existing public APIs remain unchanged after refactoring
+
+### **File Organization**
+- **Tilemap.cs** (405 lines): Core functionality only - rendering, layer access, animation management
+- **Tilemap.JsonLoader.cs**: JSON parsing as partial class - maintains single logical unit
+- **TilemapCollection.cs**: Collection management for multiple maps
+- **AnimatedTile.cs**: Complete animation system in dedicated module
+- **TileLayer.cs & ObjectLayer.cs**: Separated data structures by responsibility
+- **TilesetDefinition.cs**: Isolated tileset metadata structure
+
+### **Performance Features**
 - **Shared texture atlas**: Single atlas used across all graphics classes for optimal performance
 - **Singleton Core pattern**: Follows MonoGame Library's resource management philosophy  
-- **Static tile rendering**: Optimized for performance without animation processing overhead
+- **Lazy caching**: Collision shapes cached on first use for performance optimization
 - **Professional z-ordering**: Layer-based depth rendering for character interaction
 - **Memory efficiency**: Eliminates duplicate atlas loading across multiple tilemaps
 - **Consistent patterns**: Follows library-wide dependency injection pattern for shared resources
 - **Separation of concerns**: Static tiles handled separately from animated sprites
 - **Performance focused**: Minimal texture switching during rendering
 
-The system is optimized for **production games** requiring professional tilemap rendering with entities that interact naturally with the environment through proper depth sorting.
+The system is optimized for **production games** requiring professional tilemap rendering with entities that interact naturally with the environment through proper depth sorting, while maintaining clean, maintainable code architecture.
