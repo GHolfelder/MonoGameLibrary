@@ -58,6 +58,11 @@ public partial class Tilemap
     public Color? BackgroundColor { get; private set; }
 
     /// <summary>
+    /// Gets or sets additional arbitrary properties for the tilemap.
+    /// </summary>
+    public Dictionary<string, object> Properties { get; set; } = new();
+
+    /// <summary>
     /// Gets the tile layers in rendering order (back to front).
     /// </summary>
     public IReadOnlyList<TileLayer> TileLayers => _tileLayers.AsReadOnly();
@@ -349,11 +354,51 @@ public partial class Tilemap
     /// <param name="gid">The global tile ID.</param>
     /// <param name="tileData">The tile data if found.</param>
     /// <returns>True if tile data was found for this GID.</returns>
-    internal bool GetTileData(int gid, out TileData tileData)
+    public bool GetTileData(int gid, out TileData tileData)
     {
         return _tileData.TryGetValue(gid, out tileData);
     }
+    /// <summary>
+    /// Gets the tile data at a specific tile position in a layer.
+    /// </summary>
+    /// <param name="layerName">The name of the tile layer.</param>
+    /// <param name="tileX">The X tile coordinate.</param>
+    /// <param name="tileY">The Y tile coordinate.</param>
+    /// <returns>The tile data if found, null otherwise.</returns>
+    public TileData GetTileDataAt(string layerName, int tileX, int tileY)
+    {
+        var layer = GetLayerByName(layerName);
+        if (layer == null || tileX < 0 || tileY < 0 || tileX >= layer.Width || tileY >= layer.Height)
+            return null;
+            
+        int tileIndex = tileY * layer.Width + tileX;
+        if (tileIndex >= layer.Tiles.Length)
+            return null;
+            
+        int gid = layer.Tiles[tileIndex];
+        return gid == 0 ? null : (_tileData.TryGetValue(gid, out TileData tileData) ? tileData : null);
+    }
 
+    /// <summary>
+    /// Gets the tile data at a specific tile position in a layer by layer index.
+    /// </summary>
+    /// <param name="layerIndex">The index of the tile layer.</param>
+    /// <param name="tileX">The X tile coordinate.</param>
+    /// <param name="tileY">The Y tile coordinate.</param>
+    /// <returns>The tile data if found, null otherwise.</returns>
+    public TileData GetTileDataAt(int layerIndex, int tileX, int tileY)
+    {
+        var layer = GetLayerByIndex(layerIndex);
+        if (layer == null || tileX < 0 || tileY < 0 || tileX >= layer.Width || tileY >= layer.Height)
+            return null;
+            
+        int tileIndex = tileY * layer.Width + tileX;
+        if (tileIndex >= layer.Tiles.Length)
+            return null;
+            
+        int gid = layer.Tiles[tileIndex];
+        return gid == 0 ? null : (_tileData.TryGetValue(gid, out TileData tileData) ? tileData : null);
+    }
     /// <summary>
     /// Gets collision objects from a specific object layer or all object layers.
     /// </summary>
@@ -400,6 +445,57 @@ public partial class Tilemap
             return objects.FirstOrDefault(obj => string.Equals(obj.Name, objectName, StringComparison.OrdinalIgnoreCase));
         
         return objects.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Gets a tilemap property value with type conversion.
+    /// </summary>
+    /// <typeparam name="T">The type to convert to.</typeparam>
+    /// <param name="key">The property key.</param>
+    /// <param name="defaultValue">The default value if not found or conversion fails.</param>
+    /// <returns>The property value or default value.</returns>
+    public T GetProperty<T>(string key, T defaultValue = default(T))
+    {
+        if (!Properties.TryGetValue(key, out var value))
+            return defaultValue;
+            
+        if (value is T directValue)
+            return directValue;
+            
+        // Handle string to primitive conversions
+        if (value is string stringValue && typeof(T) != typeof(string))
+        {
+            try
+            {
+                return (T)Convert.ChangeType(stringValue, typeof(T));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        
+        return defaultValue;
+    }
+    
+    /// <summary>
+    /// Sets a tilemap property value.
+    /// </summary>
+    /// <param name="key">The property key.</param>
+    /// <param name="value">The property value.</param>
+    public void SetProperty(string key, object value)
+    {
+        Properties[key] = value;
+    }
+    
+    /// <summary>
+    /// Checks if a tilemap property exists.
+    /// </summary>
+    /// <param name="key">The property key.</param>
+    /// <returns>True if the property exists.</returns>
+    public bool HasProperty(string key)
+    {
+        return Properties.ContainsKey(key);
     }
 
 }

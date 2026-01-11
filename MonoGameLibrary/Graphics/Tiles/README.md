@@ -13,7 +13,8 @@ The main tilemap class handling core functionality:
 - **Rendering methods**: `Draw()`, `DrawLayer()`, `DrawLayersUpTo()`, `DrawLayersFrom()`
 - **Layer access**: `GetLayerByName()`, `GetLayerByIndex()`, `GetObjectLayer()`
 - **Animation management**: `Update()`, `CreateAnimatedTileInstances()`
-- **Data access**: `GetCollisionObjects()`, `FindFirstCollisionObject()`
+- **Data access**: `GetCollisionObjects()`, `FindFirstCollisionObject()`, `GetTileData()`, `GetTileDataAt()`
+- **Properties support**: `GetProperty<T>()`, `SetProperty()`, `HasProperty()` for tilemap-level custom properties
 - **Core properties**: Map dimensions, tile sizes, scaling, background color
 
 #### Tilemap JSON Loader (Tilemap.JsonLoader.cs)
@@ -38,8 +39,8 @@ Frame-based tile animation components:
 
 #### Layer Data Structures (TileLayer.cs)
 Tile layer and data definitions:
-- **TileLayer**: Layer properties (name, dimensions, opacity, visibility, offset, tile data)
-- **TileData**: Tile-specific data including collision objects and custom properties
+- **TileLayer**: Layer properties (name, dimensions, opacity, visibility, offset, tile data, custom properties)
+- **TileData**: Tile-specific data including collision objects, custom properties, and helper methods (`GetProperty<T>()`, `SetProperty()`, `HasProperty()`)
 
 #### Object System (ObjectLayer.cs)
 Object layer and collision object definitions:
@@ -249,6 +250,135 @@ foregroundLayer.Opacity = 0.5f;
 tilemap.DrawLayer(spriteBatch, backgroundLayer, position);
 ```
 
+### Properties System Usage
+
+The tilemap system provides comprehensive support for arbitrary properties at multiple levels:
+
+#### Tilemap-Level Properties
+```csharp
+// Access tilemap properties with type safety
+var tilemap = Tilemap.FromJson(Content, "maps/level1.json", atlas)["level1"];
+var difficulty = tilemap.GetProperty<string>("difficulty", "normal");
+var timeLimit = tilemap.GetProperty<int>("timeLimit", 600);
+var hasSecrets = tilemap.GetProperty<bool>("hasSecrets", false);
+
+// Set properties at runtime
+tilemap.SetProperty("playerVisited", true);
+tilemap.SetProperty("completionTime", gameTime.TotalGameTime.TotalSeconds);
+```
+
+#### Individual Tile Properties
+```csharp
+// Access tile properties by position (most common)
+var tileData = tilemap.GetTileDataAt("Ground", tileX, tileY);
+if (tileData != null)
+{
+    var damage = tileData.GetProperty<int>("damage", 0);
+    var walkSpeed = tileData.GetProperty<float>("walkSpeed", 1.0f);
+    var biome = tileData.GetProperty<string>("biome", "default");
+    var isWalkable = tileData.GetProperty<bool>("walkable", true);
+    
+    // Modify tile properties at runtime
+    tileData.SetProperty("visited", true);
+    
+    // Apply game logic
+    if (damage > 0) player.TakeDamage(damage);
+    if (walkSpeed != 1.0f) player.ModifySpeed(walkSpeed);
+}
+
+// Access by GID (global tile ID)
+if (tilemap.GetTileData(gid, out TileData tileData))
+{
+    var specialEffect = tileData.GetProperty<string>("effect", "");
+    if (!string.IsNullOrEmpty(specialEffect))
+    {
+        EffectManager.TriggerEffect(specialEffect);
+    }
+}
+```
+
+#### Layer Properties
+```csharp
+// Tile layer properties
+var groundLayer = tilemap.GetLayerByName("Ground");
+var scrollSpeed = groundLayer.Properties.GetValueOrDefault("scrollSpeed", 1.0f);
+var parallaxFactor = (float)groundLayer.Properties.GetValueOrDefault("parallax", 1.0f);
+
+// Object layer properties
+var collisionLayer = tilemap.GetObjectLayer("Collision");
+var enablePhysics = (bool)collisionLayer.Properties.GetValueOrDefault("enablePhysics", true);
+var gravityModifier = (float)collisionLayer.Properties.GetValueOrDefault("gravity", 1.0f);
+```
+
+#### Object Properties
+```csharp
+// Access object properties for game logic
+var exitTriggers = tilemap.GetCollisionObjects("Triggers", "Exit");
+foreach (var trigger in exitTriggers)
+{
+    var targetRoom = (string)trigger.Properties.GetValueOrDefault("targetRoom", "");
+    var spawnPoint = (string)trigger.Properties.GetValueOrDefault("spawnPoint", "default");
+    var requiresKey = (bool)trigger.Properties.GetValueOrDefault("requiresKey", false);
+    
+    if (player.Intersects(trigger) && (!requiresKey || player.HasKey))
+    {
+        SceneManager.ChangeRoom(targetRoom, spawnPoint);
+    }
+}
+```
+
+#### JSON Properties Format
+```json
+{
+  "name": "level1",
+  "width": 30,
+  "height": 20,
+  "properties": {
+    "difficulty": "hard",
+    "timeLimit": 300,
+    "hasSecrets": true,
+    "recommendedLevel": 5,
+    "bgMusic": "dungeon_theme"
+  },
+  "tilesets": [{
+    "name": "terrain",
+    "firstGid": 1,
+    "tiles": [{
+      "id": 5,
+      "properties": {
+        "damage": 10,
+        "walkSpeed": 0.5,
+        "biome": "lava",
+        "effect": "burn"
+      }
+    }]
+  }],
+  "tileLayers": [{
+    "name": "Ground",
+    "properties": {
+      "scrollSpeed": 0.8,
+      "parallax": 0.5
+    }
+  }],
+  "objectLayers": [{
+    "name": "Triggers",
+    "properties": {
+      "enablePhysics": false,
+      "debugVisible": true
+    },
+    "objects": [{
+      "name": "Exit_North",
+      "objectType": "rectangle",
+      "properties": {
+        "targetRoom": "level2",
+        "spawnPoint": "South_Entrance",
+        "requiresKey": true
+      }
+    }]
+  }]
+}
+```
+
 ## File Organization
 
 ### Recommended Content Structure
@@ -445,12 +575,20 @@ This modular tilemap system provides:
 - **API preservation**: All existing public APIs remain unchanged after refactoring
 
 ### **File Organization**
-- **Tilemap.cs** (405 lines): Core functionality only - rendering, layer access, animation management
-- **Tilemap.JsonLoader.cs**: JSON parsing as partial class - maintains single logical unit
+- **Tilemap.cs** (455 lines): Core functionality - rendering, layer access, animation management, properties support
+- **Tilemap.JsonLoader.cs**: JSON parsing as partial class - maintains single logical unit, includes properties parsing
 - **TilemapCollection.cs**: Collection management for multiple maps
 - **AnimatedTile.cs**: Complete animation system in dedicated module
-- **TileLayer.cs & ObjectLayer.cs**: Separated data structures by responsibility
+- **TileLayer.cs & ObjectLayer.cs**: Separated data structures by responsibility with properties support
 - **TilesetDefinition.cs**: Isolated tileset metadata structure
+
+### **Properties System Features**
+- **Type-safe access**: Generic `GetProperty<T>()` methods with automatic type conversion
+- **Multi-level support**: Properties at tilemap, layer, tile, and object levels
+- **Runtime modification**: `SetProperty()` and property existence checking with `HasProperty()`
+- **JSON integration**: Automatic parsing and loading of properties from JSON format
+- **Helper methods**: Convenient access patterns for common use cases (`GetTileDataAt()`, etc.)
+- **Default value support**: Fallback values when properties don't exist
 
 ### **Performance Features**
 - **Shared texture atlas**: Single atlas used across all graphics classes for optimal performance

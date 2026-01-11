@@ -97,6 +97,23 @@ public partial class Tilemap
             }
         }
 
+        // Parse tilemap properties if present
+        if (mapElement.TryGetProperty("properties", out JsonElement mapPropertiesElement))
+        {
+            foreach (JsonProperty property in mapPropertiesElement.EnumerateObject())
+            {
+                object value = property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString(),
+                    JsonValueKind.Number => property.Value.GetDecimal(),
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => property.Value.ToString()
+                };
+                tilemap.Properties[property.Name] = value;
+            }
+        }
+
         // Parse tilesets
         if (mapElement.TryGetProperty("tilesets", out JsonElement tilesetsElement))
         {
