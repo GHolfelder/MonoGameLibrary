@@ -97,7 +97,7 @@ public partial class Tilemap
             }
         }
 
-        // Parse tilemap properties if present
+        // Parse tilemap properties if present (including renderOrder)
         if (mapElement.TryGetProperty("properties", out JsonElement mapPropertiesElement))
         {
             foreach (JsonProperty property in mapPropertiesElement.EnumerateObject())
@@ -111,6 +111,16 @@ public partial class Tilemap
                     _ => property.Value.ToString()
                 };
                 tilemap.Properties[property.Name] = value;
+            }
+        }
+
+        // Also support top-level renderOrder for convenience
+        if (mapElement.TryGetProperty("renderOrder", out JsonElement renderOrderElement))
+        {
+            string renderOrderCsv = renderOrderElement.GetString();
+            if (!string.IsNullOrEmpty(renderOrderCsv))
+            {
+                tilemap.Properties["renderOrder"] = renderOrderCsv;
             }
         }
 
@@ -140,6 +150,9 @@ public partial class Tilemap
                 tilemap.LoadObjectLayerFromJson(objectLayerElement);
             }
         }
+
+        // Validate render order after all layers are loaded
+        ValidateRenderOrder(tilemap);
 
         return tilemap;
     }
@@ -533,6 +546,59 @@ public partial class Tilemap
         }
         
         return points.ToArray();
+    }
+
+    /// <summary>
+    /// Validates that all layer names in RenderOrder exist and warns about missing layers.
+    /// </summary>
+    private static void ValidateRenderOrder(Tilemap tilemap)
+    {
+        if (!tilemap.Properties.TryGetValue("renderOrder", out var renderOrderValue) || 
+            renderOrderValue is not string renderOrderCsv || 
+            string.IsNullOrWhiteSpace(renderOrderCsv))
+        {
+            return; // No render order specified
+        }
+        
+        var renderOrder = renderOrderCsv.Split(',')
+            .Select(name => name.Trim())
+            .Where(name => !string.IsNullOrEmpty(name))
+            .ToList();
+            
+        var existingLayerNames = tilemap.TileLayers.Select(l => l.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var invalidNames = new List<string>();
+        var missingNames = new List<string>();
+        
+        // Check for invalid names in render order
+        foreach (string layerName in renderOrder)
+        {
+            if (!existingLayerNames.Contains(layerName))
+            {
+                invalidNames.Add(layerName);
+            }
+        }
+        
+        // Check for layers not included in render order
+        var renderOrderNames = renderOrder.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (string layerName in existingLayerNames)
+        {
+            if (!renderOrderNames.Contains(layerName))
+            {
+                missingNames.Add(layerName);
+            }
+        }
+        
+        // Log warnings
+        if (invalidNames.Count > 0)
+        {
+            throw new InvalidOperationException($"RenderOrder contains invalid layer names: {string.Join(", ", invalidNames)}");
+        }
+        
+        if (missingNames.Count > 0)
+        {
+            // Log warning but don't throw - missing layers just won't render
+            Console.WriteLine($"Warning: RenderOrder missing layer names: {string.Join(", ", missingNames)}. These layers will not render.");
+        }
     }
 
     /// <summary>

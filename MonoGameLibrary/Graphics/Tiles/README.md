@@ -104,7 +104,7 @@ Modern approach using texture atlases with animated tile support. JSON files now
                 "sourceX": 32,
                 "sourceY": 0,
                 "sourceWidth": 32,
-              "sourceHeight": 32
+                "sourceHeight": 32
             }
           ]
         }
@@ -175,6 +175,13 @@ Modern approach using texture atlases with animated tile support. JSON files now
 - **Character integration**: Draw entities between layers for depth illusion
 - **Selective rendering**: Control which layers render for performance
 
+#### Custom Render Order (RenderOrder)
+- **Flexible layer ordering**: Override default layer rendering order via properties
+- **Tiled Map Editor compatibility**: Handle any layer order from map editors
+- **Runtime control**: Modify render order programmatically
+- **Validation**: Automatic validation of layer names with helpful error messages
+- **Backward compatibility**: Falls back to default order when not specified
+
 #### Professional Workflow
 - **Performance optimized**: Minimal texture switching during rendering
 - **Scene-based**: Different JSON file for each game scene/level
@@ -236,6 +243,78 @@ foreach(var npc in npcs) npc.Draw(spriteBatch);
 tilemap.DrawLayersFrom(spriteBatch, mapPosition, 1);
 ```
 
+### Custom Render Order Control
+
+The RenderOrder property allows you to override the default layer rendering order, providing perfect compatibility with Tiled Map Editor and flexible control over layer z-ordering.
+
+#### Setting Render Order
+```csharp
+// Set render order programmatically
+tilemap.SetRenderOrder("background, middleground, foreground");
+tilemap.SetRenderOrder(new[] { "ground", "walls", "ceiling" });
+
+// Access as property
+var renderOrder = tilemap.GetProperty<string>("renderOrder", "");
+
+// Clear custom render order (reverts to default)
+tilemap.ClearRenderOrder();
+```
+
+#### Drawing with Custom Order
+```csharp
+// With renderOrder: "background, middleground, foreground"
+// These methods now respect the custom render order
+
+// Draw up to middleground layer (background + middleground)
+tilemap.DrawLayersUpTo(spriteBatch, position, "middleground");
+
+// Draw characters and sprites
+player.Draw(spriteBatch);
+foreach(var sprite in gameSprites) sprite.Draw(spriteBatch);
+
+// Draw from foreground layer onwards (foreground only)
+tilemap.DrawLayersFrom(spriteBatch, position, "foreground");
+```
+
+#### Tiled Map Editor Compatibility
+```csharp
+// Tiled typically exports layers in visual order (top to bottom)
+// Use renderOrder to specify proper back-to-front rendering:
+// JSON: "renderOrder": "background, middleground, foreground"
+
+// This handles any layer order from map editors automatically
+var tilemaps = Tilemap.FromJson(Content, "level1.json", atlas);
+var tilemap = tilemaps["level1"];
+
+// Standard z-ordering now works regardless of JSON layer order
+tilemap.DrawLayersUpTo(spriteBatch, position, 1);  // background layers
+player.Draw(spriteBatch);                          // character
+tilemap.DrawLayersFrom(spriteBatch, position, 2);  // foreground layers
+```
+
+#### JSON RenderOrder Configuration
+```json
+{
+  "name": "level1",
+  "properties": {
+    "renderOrder": "background, middleground, foreground",
+    "difficulty": "hard"
+  },
+  "tileLayers": [
+    { "name": "foreground" },    // Tiled visual order
+    { "name": "middleground" }, 
+    { "name": "background" }
+  ]
+}
+
+// Alternative: top-level property for convenience
+{
+  "name": "level1",
+  "renderOrder": "background, middleground, foreground",
+  "tileLayers": [...]
+}
+```
+
 ### Dynamic Layer Control
 ```csharp
 // Access layers by name or index
@@ -252,7 +331,7 @@ tilemap.DrawLayer(spriteBatch, backgroundLayer, position);
 
 ### Properties System Usage
 
-The tilemap system provides comprehensive support for arbitrary properties at multiple levels:
+The tilemap system provides comprehensive support for arbitrary properties at multiple levels, including the special **RenderOrder** property for layer control:
 
 #### Tilemap-Level Properties
 ```csharp
@@ -589,6 +668,7 @@ This modular tilemap system provides:
 - **JSON integration**: Automatic parsing and loading of properties from JSON format
 - **Helper methods**: Convenient access patterns for common use cases (`GetTileDataAt()`, etc.)
 - **Default value support**: Fallback values when properties don't exist
+- **RenderOrder support**: Special property for custom layer rendering order and Tiled compatibility
 
 ### **Performance Features**
 - **Shared texture atlas**: Single atlas used across all graphics classes for optimal performance

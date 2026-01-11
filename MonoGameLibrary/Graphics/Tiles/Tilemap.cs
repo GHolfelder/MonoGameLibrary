@@ -205,10 +205,10 @@ public partial class Tilemap
     /// <param name="position">The position to draw the tilemap at.</param>
     public void Draw(SpriteBatch spriteBatch, Vector2 position)
     {
-        foreach (var layer in _tileLayers)
+        var layersInOrder = GetLayersInRenderOrder();
+        foreach (var layer in layersInOrder)
         {
             if (!layer.Visible) continue;
-
             DrawLayer(spriteBatch, layer, position);
         }
     }
@@ -264,35 +264,81 @@ public partial class Tilemap
     }
 
     /// <summary>
-    /// Draws layers up to a specified layer index (useful for character rendering between layers).
+    /// Draws layers up to a specified layer index (inclusive) in render order.
     /// </summary>
     /// <param name="spriteBatch">The sprite batch to draw with.</param>
     /// <param name="position">The position to draw the tilemap at.</param>
     /// <param name="upToLayerIndex">The maximum layer index to draw (inclusive).</param>
     public void DrawLayersUpTo(SpriteBatch spriteBatch, Vector2 position, int upToLayerIndex)
     {
-        for (int i = 0; i <= upToLayerIndex && i < _tileLayers.Count; i++)
+        int upToRenderIndex = GetRenderIndex(upToLayerIndex);
+        if (upToRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = 0; i <= upToRenderIndex && i < layersInOrder.Count; i++)
         {
-            var layer = _tileLayers[i];
+            var layer = layersInOrder[i];
             if (!layer.Visible) continue;
-
             DrawLayer(spriteBatch, layer, position);
         }
     }
 
     /// <summary>
-    /// Draws layers from a specified layer index onwards (useful for foreground layers).
+    /// Draws layers from a specified layer index onwards (inclusive) in render order.
     /// </summary>
     /// <param name="spriteBatch">The sprite batch to draw with.</param>
     /// <param name="position">The position to draw the tilemap at.</param>
     /// <param name="fromLayerIndex">The minimum layer index to draw (inclusive).</param>
     public void DrawLayersFrom(SpriteBatch spriteBatch, Vector2 position, int fromLayerIndex)
     {
-        for (int i = fromLayerIndex; i < _tileLayers.Count; i++)
+        int fromRenderIndex = GetRenderIndex(fromLayerIndex);
+        if (fromRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = fromRenderIndex; i < layersInOrder.Count; i++)
         {
-            var layer = _tileLayers[i];
+            var layer = layersInOrder[i];
             if (!layer.Visible) continue;
+            DrawLayer(spriteBatch, layer, position);
+        }
+    }
 
+    /// <summary>
+    /// Draws layers up to a specified layer name (inclusive) in render order.
+    /// </summary>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position to draw the tilemap at.</param>
+    /// <param name="upToLayerName">The name of the last layer to draw.</param>
+    public void DrawLayersUpTo(SpriteBatch spriteBatch, Vector2 position, string upToLayerName)
+    {
+        int upToRenderIndex = GetRenderIndex(upToLayerName);
+        if (upToRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = 0; i <= upToRenderIndex && i < layersInOrder.Count; i++)
+        {
+            var layer = layersInOrder[i];
+            if (!layer.Visible) continue;
+            DrawLayer(spriteBatch, layer, position);
+        }
+    }
+
+    /// <summary>
+    /// Draws layers from a specified layer name onwards (inclusive) in render order.
+    /// </summary>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position to draw the tilemap at.</param>
+    /// <param name="fromLayerName">The name of the first layer to draw.</param>
+    public void DrawLayersFrom(SpriteBatch spriteBatch, Vector2 position, string fromLayerName)
+    {
+        int fromRenderIndex = GetRenderIndex(fromLayerName);
+        if (fromRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = fromRenderIndex; i < layersInOrder.Count; i++)
+        {
+            var layer = layersInOrder[i];
+            if (!layer.Visible) continue;
             DrawLayer(spriteBatch, layer, position);
         }
     }
@@ -496,6 +542,100 @@ public partial class Tilemap
     public bool HasProperty(string key)
     {
         return Properties.ContainsKey(key);
+    }
+
+    /// <summary>
+    /// Gets the parsed render order from properties.
+    /// </summary>
+    private List<string> GetRenderOrder()
+    {
+        if (!Properties.TryGetValue("renderOrder", out var renderOrderValue) || 
+            renderOrderValue is not string renderOrderCsv || 
+            string.IsNullOrWhiteSpace(renderOrderCsv))
+        {
+            return null;
+        }
+        
+        return renderOrderCsv.Split(',')
+            .Select(name => name.Trim())
+            .Where(name => !string.IsNullOrEmpty(name))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gets layers in the specified render order.
+    /// </summary>
+    private List<TileLayer> GetLayersInRenderOrder()
+    {
+        var renderOrder = GetRenderOrder();
+        if (renderOrder == null || renderOrder.Count == 0)
+        {
+            return _tileLayers.ToList();
+        }
+
+        var orderedLayers = new List<TileLayer>();
+        foreach (string layerName in renderOrder)
+        {
+            var layer = GetLayerByName(layerName);
+            if (layer != null)
+            {
+                orderedLayers.Add(layer);
+            }
+        }
+        return orderedLayers;
+    }
+
+    /// <summary>
+    /// Gets the render index of a layer by name.
+    /// </summary>
+    private int GetRenderIndex(string layerName)
+    {
+        var renderOrder = GetRenderOrder();
+        if (renderOrder == null || renderOrder.Count == 0)
+        {
+            var layer = GetLayerByName(layerName);
+            return layer != null ? _tileLayers.IndexOf(layer) : -1;
+        }
+        
+        return renderOrder.IndexOf(layerName);
+    }
+
+    /// <summary>
+    /// Gets the render index of a layer by its data index.
+    /// </summary>
+    private int GetRenderIndex(int layerIndex)
+    {
+        if (layerIndex < 0 || layerIndex >= _tileLayers.Count)
+            return -1;
+            
+        string layerName = _tileLayers[layerIndex].Name;
+        return GetRenderIndex(layerName);
+    }
+
+    /// <summary>
+    /// Sets the render order for tile layers.
+    /// </summary>
+    /// <param name="layerNames">Comma-separated layer names in render order.</param>
+    public void SetRenderOrder(string layerNames)
+    {
+        Properties["renderOrder"] = layerNames;
+    }
+
+    /// <summary>
+    /// Sets the render order for tile layers.
+    /// </summary>
+    /// <param name="layerNames">List of layer names in render order.</param>
+    public void SetRenderOrder(IEnumerable<string> layerNames)
+    {
+        Properties["renderOrder"] = string.Join(", ", layerNames);
+    }
+
+    /// <summary>
+    /// Clears the custom render order, reverting to default layer order.
+    /// </summary>
+    public void ClearRenderOrder()
+    {
+        Properties.Remove("renderOrder");
     }
 
 }
