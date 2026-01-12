@@ -4,6 +4,21 @@ This directory contains detailed release notes for each version of MonoGame Libr
 
 ## Latest Releases
 
+### [Version 1.0.25](ReleaseNotes-1.0.25.md) - January 11, 2026
+**Performance Optimizations & API Improvements**
+- 30% faster collision detection algorithms with reduced memory allocations
+- Standardized method signatures and improved API consistency across all systems
+- Enhanced error handling and debugging with descriptive messages and context
+- Resolved edge cases in room transitions and tilemap rendering systems
+- Improved performance monitoring and diagnostic tools for better optimization
+
+### [Version 1.0.24](ReleaseNotes-1.0.24.md) - January 4, 2026
+**Enhanced Character System, Debug Messages & Room Management**
+- Character velocity exposure with automatic calculation and game logic integration
+- Enhanced debug system with message deduplication and overlay integration
+- Professional room management with QuadTree spatial optimization
+- Seamless room transitions with exit collision detection and spatial partitioning
+
 ### [Version 1.0.23](ReleaseNotes-1.0.23.md) - December 29, 2025
 **Enhanced Developer Mode, FPS System & Multiple Maps**
 - Enhanced FPS display with 2-decimal precision and dynamic background sizing
