@@ -458,6 +458,65 @@ foreach (var trigger in exitTriggers)
 }
 ```
 
+### QuadTree Spatial Optimization
+
+The tilemap system supports QuadTree spatial optimization for efficient collision detection in room-based games. Configure QuadTree behavior via tilemap properties:
+
+#### QuadTree Properties
+```json
+{
+  "name": "large_outdoor_map",
+  "width": 100,
+  "height": 75,
+  "properties": {
+    "quadTreeEnabled": true,
+    "maxExitsPerNode": 12,
+    "maxQuadTreeDepth": 8,
+    "exitDetectionRadius": 48.0
+  },
+  "objectLayers": [
+    {
+      "name": "Exits",
+      "objects": [
+        {
+          "name": "Exit_North",
+          "objectType": "rectangle",
+          "x": 3200, "y": 0, "width": 64, "height": 32,
+          "properties": {
+            "targetRoom": "mountain_path",
+            "entranceExit": "South_Entrance"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Property Reference
+| Property | Type | Default | Range | Description |
+|----------|------|---------|-------|-------------|
+| `quadTreeEnabled` | bool | true | - | Enable QuadTree optimization for room transitions |
+| `maxExitsPerNode` | int | 8 | 1-50 | Maximum exits per node before subdivision |
+| `maxQuadTreeDepth` | int | 6 | 1-10 | Maximum tree depth for spatial partitioning |
+| `exitDetectionRadius` | float | 32.0 | 1.0-1000.0 | Player detection radius for exits (pixels) |
+
+#### Recommended Settings
+- **Small maps** (< 30x30 tiles, < 10 exits): `maxExitsPerNode: 4, maxQuadTreeDepth: 4`
+- **Medium maps** (30x60 tiles, 10-25 exits): `maxExitsPerNode: 8, maxQuadTreeDepth: 6` (default)
+- **Large maps** (60x100+ tiles, 25+ exits): `maxExitsPerNode: 12, maxQuadTreeDepth: 8`
+
+#### Integration with Room Manager
+```csharp
+// Room manager automatically reads QuadTree properties
+_roomManager.SetCurrentMap("large_outdoor_map", tilemap);
+
+// Properties are validated with warnings for invalid values
+// Debug information shows QuadTree configuration when developer mode is active (F1)
+```
+
+For complete room management documentation, see [Managers README](../Managers/README.md).
+
 ## File Organization
 
 ### Recommended Content Structure

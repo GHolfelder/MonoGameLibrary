@@ -64,7 +64,12 @@ Flexible AI behavior system for implementing game artificial intelligence.
 - **Interfaces**: IAIBehavior
 - **Features**: Behavior composition, state machines, patrol AI, extensible design patterns
 
-### 🛠️ [Utilities](MonoGameLibrary/Utilities/README.md)
+### � [Managers](MonoGameLibrary/Managers/README.md)
+High-level systems for room management, transitions, and spatial optimization.
+- **Classes**: RoomManagerBase (abstract), RoomManager (concrete implementation)
+- **Features**: Event-driven room transitions, QuadTree spatial optimization, performance tracking, property-based configuration
+
+### �🛠️ [Utilities](MonoGameLibrary/Utilities/README.md)
 Common utilities, logging system, and helper classes.
 - **Classes**: ILogger (ConsoleLogger, NullLogger), Direction enums
 - **Features**: Flexible logging, directional movement, type-safe enumerations
