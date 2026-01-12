@@ -2,37 +2,63 @@
 
 The `MonoGameLibrary.Graphics.Tiles` namespace provides comprehensive tilemap and tileset functionality for 2D games, with support for both traditional XML workflows and modern JSON-based texture atlas integration. This includes automatic support for animated tiles that require no changes to existing game code.
 
-## Core Classes
+## Modular Architecture
 
-### Tilemap
-The main tilemap class supporting multiple rendering approaches:
+The tilemap system has been refactored into focused, single-responsibility modules for better maintainability and discoverability:
 
-- **JSON-based loading** with texture atlas integration
-- **Multi-layer support** for professional z-ordering
-- **Proper depth rendering** for characters behind walls/trees
-- **Layer management** with visibility and opacity controls
-- **Animated tile support** with automatic frame cycling
+### Core Classes
 
-### Tileset & SpacedTileset
+#### Tilemap (Tilemap.cs)
+The main tilemap class handling core functionality:
+- **Rendering methods**: `Draw()`, `DrawLayer()`, `DrawLayersUpTo()`, `DrawLayersFrom()`
+- **Layer access**: `GetLayerByName()`, `GetLayerByIndex()`, `GetObjectLayer()`
+- **Animation management**: `Update()`, `CreateAnimatedTileInstances()`
+- **Data access**: `GetCollisionObjects()`, `FindFirstCollisionObject()`, `GetTileData()`, `GetTileDataAt()`
+- **Properties support**: `GetProperty<T>()`, `SetProperty()`, `HasProperty()` for tilemap-level custom properties
+- **Core properties**: Map dimensions, tile sizes, scaling, background color
+
+#### Tilemap JSON Loader (Tilemap.JsonLoader.cs)
+JSON parsing functionality as partial class:
+- **Static factory methods**: `FromJson()` for loading tilemap collections
+- **JSON parsing**: Map, tileset, layer, and object parsing
+- **Format validation**: Array-based JSON structure handling
+- **Color parsing**: Hex color string conversion
+
+#### TilemapCollection (TilemapCollection.cs)
+Collection management for multiple tilemaps:
+- **Map storage**: Dictionary-based storage with case-insensitive keys
+- **Access patterns**: By name `collection["mapName"]` or index `collection[0]`
+- **Safe retrieval**: `TryGetMap()` for error-safe access
+- **Enumeration**: `MapNames` property and `Count` for iteration
+
+#### Animation System (AnimatedTile.cs)
+Frame-based tile animation components:
+- **AnimatedTileFrame**: Individual animation frames with timing and source coordinates
+- **AnimatedTile**: Tile definition with animation sequence and properties
+- **AnimatedTileInstance**: Per-instance animation state management with atlas region support
+
+#### Layer Data Structures (TileLayer.cs)
+Tile layer and data definitions:
+- **TileLayer**: Layer properties (name, dimensions, opacity, visibility, offset, tile data, custom properties)
+- **TileData**: Tile-specific data including collision objects, custom properties, and helper methods (`GetProperty<T>()`, `SetProperty()`, `HasProperty()`)
+
+#### Object System (ObjectLayer.cs)
+Object layer and collision object definitions:
+- **CollisionObjectType**: Enumeration of supported shapes (Rectangle, Ellipse, Point, Polygon, Polyline, Tile, Text)
+- **CollisionObject**: Object properties, geometry, rotation, custom properties, cached collision shapes
+- **ObjectLayer**: Object container with layer properties and object collections
+
+#### Tileset Definitions (TilesetDefinition.cs)
+Tileset structure and metadata:
+- **TilesetDefinition**: Tileset properties (name, GID range, dimensions, atlas sprite reference, tile definitions)
+
+### Legacy Support
+
+#### Tileset & SpacedTileset
 Tileset implementations supporting various layout formats:
-
 - **Tileset**: Standard evenly-spaced tile grids
 - **SpacedTileset**: Handles spacing and margins between tiles
 - **ITileset Interface**: Common interface for seamless switching
-
-### TileLayer
-Represents individual tile layers with:
-
-- Layer properties (name, visibility, opacity, offset)
-- Tile data arrays with global ID references
-- Custom properties and metadata support
-
-### Animated Tiles
-Automatic animation system for tile animations:
-
-- **AnimatedTile**: Defines tiles with animation frames
-- **AnimatedTileFrame**: Individual animation frames with timing
-- **AnimatedTileInstance**: Manages animation state per tile instance
 
 ## Supported Formats
 
@@ -78,7 +104,7 @@ Modern approach using texture atlases with animated tile support. JSON files now
                 "sourceX": 32,
                 "sourceY": 0,
                 "sourceWidth": 32,
-              "sourceHeight": 32
+                "sourceHeight": 32
             }
           ]
         }
@@ -149,6 +175,13 @@ Modern approach using texture atlases with animated tile support. JSON files now
 - **Character integration**: Draw entities between layers for depth illusion
 - **Selective rendering**: Control which layers render for performance
 
+#### Custom Render Order (RenderOrder)
+- **Flexible layer ordering**: Override default layer rendering order via properties
+- **Tiled Map Editor compatibility**: Handle any layer order from map editors
+- **Runtime control**: Modify render order programmatically
+- **Validation**: Automatic validation of layer names with helpful error messages
+- **Backward compatibility**: Falls back to default order when not specified
+
 #### Professional Workflow
 - **Performance optimized**: Minimal texture switching during rendering
 - **Scene-based**: Different JSON file for each game scene/level
@@ -210,6 +243,78 @@ foreach(var npc in npcs) npc.Draw(spriteBatch);
 tilemap.DrawLayersFrom(spriteBatch, mapPosition, 1);
 ```
 
+### Custom Render Order Control
+
+The RenderOrder property allows you to override the default layer rendering order, providing perfect compatibility with Tiled Map Editor and flexible control over layer z-ordering.
+
+#### Setting Render Order
+```csharp
+// Set render order programmatically
+tilemap.SetRenderOrder("background, middleground, foreground");
+tilemap.SetRenderOrder(new[] { "ground", "walls", "ceiling" });
+
+// Access as property
+var renderOrder = tilemap.GetProperty<string>("renderOrder", "");
+
+// Clear custom render order (reverts to default)
+tilemap.ClearRenderOrder();
+```
+
+#### Drawing with Custom Order
+```csharp
+// With renderOrder: "background, middleground, foreground"
+// These methods now respect the custom render order
+
+// Draw up to middleground layer (background + middleground)
+tilemap.DrawLayersUpTo(spriteBatch, position, "middleground");
+
+// Draw characters and sprites
+player.Draw(spriteBatch);
+foreach(var sprite in gameSprites) sprite.Draw(spriteBatch);
+
+// Draw from foreground layer onwards (foreground only)
+tilemap.DrawLayersFrom(spriteBatch, position, "foreground");
+```
+
+#### Tiled Map Editor Compatibility
+```csharp
+// Tiled typically exports layers in visual order (top to bottom)
+// Use renderOrder to specify proper back-to-front rendering:
+// JSON: "renderOrder": "background, middleground, foreground"
+
+// This handles any layer order from map editors automatically
+var tilemaps = Tilemap.FromJson(Content, "level1.json", atlas);
+var tilemap = tilemaps["level1"];
+
+// Standard z-ordering now works regardless of JSON layer order
+tilemap.DrawLayersUpTo(spriteBatch, position, 1);  // background layers
+player.Draw(spriteBatch);                          // character
+tilemap.DrawLayersFrom(spriteBatch, position, 2);  // foreground layers
+```
+
+#### JSON RenderOrder Configuration
+```json
+{
+  "name": "level1",
+  "properties": {
+    "renderOrder": "background, middleground, foreground",
+    "difficulty": "hard"
+  },
+  "tileLayers": [
+    { "name": "foreground" },    // Tiled visual order
+    { "name": "middleground" }, 
+    { "name": "background" }
+  ]
+}
+
+// Alternative: top-level property for convenience
+{
+  "name": "level1",
+  "renderOrder": "background, middleground, foreground",
+  "tileLayers": [...]
+}
+```
+
 ### Dynamic Layer Control
 ```csharp
 // Access layers by name or index
@@ -223,6 +328,194 @@ foregroundLayer.Opacity = 0.5f;
 // Draw specific layers
 tilemap.DrawLayer(spriteBatch, backgroundLayer, position);
 ```
+
+### Properties System Usage
+
+The tilemap system provides comprehensive support for arbitrary properties at multiple levels, including the special **RenderOrder** property for layer control:
+
+#### Tilemap-Level Properties
+```csharp
+// Access tilemap properties with type safety
+var tilemap = Tilemap.FromJson(Content, "maps/level1.json", atlas)["level1"];
+var difficulty = tilemap.GetProperty<string>("difficulty", "normal");
+var timeLimit = tilemap.GetProperty<int>("timeLimit", 600);
+var hasSecrets = tilemap.GetProperty<bool>("hasSecrets", false);
+
+// Set properties at runtime
+tilemap.SetProperty("playerVisited", true);
+tilemap.SetProperty("completionTime", gameTime.TotalGameTime.TotalSeconds);
+```
+
+#### Individual Tile Properties
+```csharp
+// Access tile properties by position (most common)
+var tileData = tilemap.GetTileDataAt("Ground", tileX, tileY);
+if (tileData != null)
+{
+    var damage = tileData.GetProperty<int>("damage", 0);
+    var walkSpeed = tileData.GetProperty<float>("walkSpeed", 1.0f);
+    var biome = tileData.GetProperty<string>("biome", "default");
+    var isWalkable = tileData.GetProperty<bool>("walkable", true);
+    
+    // Modify tile properties at runtime
+    tileData.SetProperty("visited", true);
+    
+    // Apply game logic
+    if (damage > 0) player.TakeDamage(damage);
+    if (walkSpeed != 1.0f) player.ModifySpeed(walkSpeed);
+}
+
+// Access by GID (global tile ID)
+if (tilemap.GetTileData(gid, out TileData tileData))
+{
+    var specialEffect = tileData.GetProperty<string>("effect", "");
+    if (!string.IsNullOrEmpty(specialEffect))
+    {
+        EffectManager.TriggerEffect(specialEffect);
+    }
+}
+```
+
+#### Layer Properties
+```csharp
+// Tile layer properties
+var groundLayer = tilemap.GetLayerByName("Ground");
+var scrollSpeed = groundLayer.Properties.GetValueOrDefault("scrollSpeed", 1.0f);
+var parallaxFactor = (float)groundLayer.Properties.GetValueOrDefault("parallax", 1.0f);
+
+// Object layer properties
+var collisionLayer = tilemap.GetObjectLayer("Collision");
+var enablePhysics = (bool)collisionLayer.Properties.GetValueOrDefault("enablePhysics", true);
+var gravityModifier = (float)collisionLayer.Properties.GetValueOrDefault("gravity", 1.0f);
+```
+
+#### Object Properties
+```csharp
+// Access object properties for game logic
+var exitTriggers = tilemap.GetCollisionObjects("Triggers", "Exit");
+foreach (var trigger in exitTriggers)
+{
+    var targetRoom = (string)trigger.Properties.GetValueOrDefault("targetRoom", "");
+    var spawnPoint = (string)trigger.Properties.GetValueOrDefault("spawnPoint", "default");
+    var requiresKey = (bool)trigger.Properties.GetValueOrDefault("requiresKey", false);
+    
+    if (player.Intersects(trigger) && (!requiresKey || player.HasKey))
+    {
+        SceneManager.ChangeRoom(targetRoom, spawnPoint);
+    }
+}
+```
+
+#### JSON Properties Format
+```json
+{
+  "name": "level1",
+  "width": 30,
+  "height": 20,
+  "properties": {
+    "difficulty": "hard",
+    "timeLimit": 300,
+    "hasSecrets": true,
+    "recommendedLevel": 5,
+    "bgMusic": "dungeon_theme"
+  },
+  "tilesets": [{
+    "name": "terrain",
+    "firstGid": 1,
+    "tiles": [{
+      "id": 5,
+      "properties": {
+        "damage": 10,
+        "walkSpeed": 0.5,
+        "biome": "lava",
+        "effect": "burn"
+      }
+    }]
+  }],
+  "tileLayers": [{
+    "name": "Ground",
+    "properties": {
+      "scrollSpeed": 0.8,
+      "parallax": 0.5
+    }
+  }],
+  "objectLayers": [{
+    "name": "Triggers",
+    "properties": {
+      "enablePhysics": false,
+      "debugVisible": true
+    },
+    "objects": [{
+      "name": "Exit_North",
+      "objectType": "rectangle",
+      "properties": {
+        "targetRoom": "level2",
+        "spawnPoint": "South_Entrance",
+        "requiresKey": true
+      }
+    }]
+  }]
+}
+```
+
+### QuadTree Spatial Optimization
+
+The tilemap system supports QuadTree spatial optimization for efficient collision detection in room-based games. Configure QuadTree behavior via tilemap properties:
+
+#### QuadTree Properties
+```json
+{
+  "name": "large_outdoor_map",
+  "width": 100,
+  "height": 75,
+  "properties": {
+    "quadTreeEnabled": true,
+    "maxExitsPerNode": 12,
+    "maxQuadTreeDepth": 8,
+    "exitDetectionRadius": 48.0
+  },
+  "objectLayers": [
+    {
+      "name": "Exits",
+      "objects": [
+        {
+          "name": "Exit_North",
+          "objectType": "rectangle",
+          "x": 3200, "y": 0, "width": 64, "height": 32,
+          "properties": {
+            "targetRoom": "mountain_path",
+            "entranceExit": "South_Entrance"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Property Reference
+| Property | Type | Default | Range | Description |
+|----------|------|---------|-------|-------------|
+| `quadTreeEnabled` | bool | true | - | Enable QuadTree optimization for room transitions |
+| `maxExitsPerNode` | int | 8 | 1-50 | Maximum exits per node before subdivision |
+| `maxQuadTreeDepth` | int | 6 | 1-10 | Maximum tree depth for spatial partitioning |
+| `exitDetectionRadius` | float | 32.0 | 1.0-1000.0 | Player detection radius for exits (pixels) |
+
+#### Recommended Settings
+- **Small maps** (< 30x30 tiles, < 10 exits): `maxExitsPerNode: 4, maxQuadTreeDepth: 4`
+- **Medium maps** (30x60 tiles, 10-25 exits): `maxExitsPerNode: 8, maxQuadTreeDepth: 6` (default)
+- **Large maps** (60x100+ tiles, 25+ exits): `maxExitsPerNode: 12, maxQuadTreeDepth: 8`
+
+#### Integration with Room Manager
+```csharp
+// Room manager automatically reads QuadTree properties
+_roomManager.SetCurrentMap("large_outdoor_map", tilemap);
+
+// Properties are validated with warnings for invalid values
+// Debug information shows QuadTree configuration when developer mode is active (F1)
+```
+
+For complete room management documentation, see [Managers README](../Managers/README.md).
 
 ## File Organization
 
@@ -410,15 +703,40 @@ This is essential for tilesets exported from tools like Tiled Map Editor or when
 
 ## Architecture Notes
 
-This JSON-based tilemap system provides:
+This modular tilemap system provides:
 
+### **Modular Design Benefits**
+- **Single responsibility**: Each class handles one specific concern (rendering, data, animation, JSON parsing)
+- **Maintainability**: Changes to JSON parsing won't affect rendering code
+- **Discoverability**: Developers can find specific functionality easily in focused files
+- **Testability**: Individual components can be tested in isolation
+- **API preservation**: All existing public APIs remain unchanged after refactoring
+
+### **File Organization**
+- **Tilemap.cs** (455 lines): Core functionality - rendering, layer access, animation management, properties support
+- **Tilemap.JsonLoader.cs**: JSON parsing as partial class - maintains single logical unit, includes properties parsing
+- **TilemapCollection.cs**: Collection management for multiple maps
+- **AnimatedTile.cs**: Complete animation system in dedicated module
+- **TileLayer.cs & ObjectLayer.cs**: Separated data structures by responsibility with properties support
+- **TilesetDefinition.cs**: Isolated tileset metadata structure
+
+### **Properties System Features**
+- **Type-safe access**: Generic `GetProperty<T>()` methods with automatic type conversion
+- **Multi-level support**: Properties at tilemap, layer, tile, and object levels
+- **Runtime modification**: `SetProperty()` and property existence checking with `HasProperty()`
+- **JSON integration**: Automatic parsing and loading of properties from JSON format
+- **Helper methods**: Convenient access patterns for common use cases (`GetTileDataAt()`, etc.)
+- **Default value support**: Fallback values when properties don't exist
+- **RenderOrder support**: Special property for custom layer rendering order and Tiled compatibility
+
+### **Performance Features**
 - **Shared texture atlas**: Single atlas used across all graphics classes for optimal performance
 - **Singleton Core pattern**: Follows MonoGame Library's resource management philosophy  
-- **Static tile rendering**: Optimized for performance without animation processing overhead
+- **Lazy caching**: Collision shapes cached on first use for performance optimization
 - **Professional z-ordering**: Layer-based depth rendering for character interaction
 - **Memory efficiency**: Eliminates duplicate atlas loading across multiple tilemaps
 - **Consistent patterns**: Follows library-wide dependency injection pattern for shared resources
 - **Separation of concerns**: Static tiles handled separately from animated sprites
 - **Performance focused**: Minimal texture switching during rendering
 
-The system is optimized for **production games** requiring professional tilemap rendering with entities that interact naturally with the environment through proper depth sorting.
+The system is optimized for **production games** requiring professional tilemap rendering with entities that interact naturally with the environment through proper depth sorting, while maintaining clean, maintainable code architecture.

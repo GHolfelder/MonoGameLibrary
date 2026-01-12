@@ -95,26 +95,47 @@ public abstract class RoomManagerBase
 
         var config = SpatialConfig.Default;
 
-        // TODO: Read map properties when Tilemap.Properties API is available
-        // For now, use default configuration
-        // Note: This assumes Tilemap has a way to access custom properties
-        // You may need to adjust based on actual MonoGameLibrary API
-        /*
-        if (tilemap?.Properties != null)
+        if (tilemap != null)
         {
-            if (tilemap.Properties.TryGetValue("QuadTreeEnabled", out var quadTreeEnabled))
-                config.QuadTreeEnabled = bool.Parse(quadTreeEnabled);
-
-            if (tilemap.Properties.TryGetValue("MaxExitsPerNode", out var maxExits))
-                config.MaxExitsPerNode = int.Parse(maxExits);
-
-            if (tilemap.Properties.TryGetValue("MaxQuadTreeDepth", out var maxDepth))
-                config.MaxDepth = int.Parse(maxDepth);
-
-            if (tilemap.Properties.TryGetValue("ExitDetectionRadius", out var detectionRadius))
-                config.ExitDetectionRadius = float.Parse(detectionRadius);
+            // Read QuadTree enabled state
+            config.QuadTreeEnabled = tilemap.GetProperty<bool>("quadTreeEnabled", config.QuadTreeEnabled);
+            
+            // Read MaxExitsPerNode with validation (1-50 range)
+            var maxExitsPerNode = tilemap.GetProperty<int>("maxExitsPerNode", config.MaxExitsPerNode);
+            if (ValidateIntRange(maxExitsPerNode, 1, 50, "maxExitsPerNode", mapName))
+            {
+                config.MaxExitsPerNode = maxExitsPerNode;
+            }
+            else
+            {
+                LogValidationWarning($"Map '{mapName}': Invalid maxExitsPerNode value {maxExitsPerNode}, using default {config.MaxExitsPerNode}");
+            }
+            
+            // Read MaxDepth with validation (1-10 range)
+            var maxDepth = tilemap.GetProperty<int>("maxQuadTreeDepth", config.MaxDepth);
+            if (ValidateIntRange(maxDepth, 1, 10, "maxQuadTreeDepth", mapName))
+            {
+                config.MaxDepth = maxDepth;
+            }
+            else
+            {
+                LogValidationWarning($"Map '{mapName}': Invalid maxQuadTreeDepth value {maxDepth}, using default {config.MaxDepth}");
+            }
+            
+            // Read ExitDetectionRadius with validation (1.0f-1000.0f range)
+            var exitRadius = tilemap.GetProperty<float>("exitDetectionRadius", config.ExitDetectionRadius);
+            if (ValidateFloatRange(exitRadius, 1.0f, 1000.0f, "exitDetectionRadius", mapName))
+            {
+                config.ExitDetectionRadius = exitRadius;
+            }
+            else
+            {
+                LogValidationWarning($"Map '{mapName}': Invalid exitDetectionRadius value {exitRadius:F1}, using default {config.ExitDetectionRadius:F1}");
+            }
+            
+            // Add debug information for QuadTree configuration
+            LogQuadTreeDebugInfo(mapName, config);
         }
-        */
 
         _mapConfigs[mapName] = config;
         return config;
@@ -240,4 +261,58 @@ public abstract class RoomManagerBase
     /// </summary>
     /// <param name="savedData">Previously saved state data</param>
     public abstract void LoadState(object savedData);
+    
+    /// <summary>
+    /// Validates an integer value is within the specified range.
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="min">Minimum allowed value</param>
+    /// <param name="max">Maximum allowed value</param>
+    /// <param name="propertyName">Name of the property for error messages</param>
+    /// <param name="mapName">Map name for error context</param>
+    /// <returns>True if valid, false otherwise</returns>
+    private bool ValidateIntRange(int value, int min, int max, string propertyName, string mapName)
+    {
+        return value >= min && value <= max;
+    }
+    
+    /// <summary>
+    /// Validates a float value is within the specified range.
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="min">Minimum allowed value</param>
+    /// <param name="max">Maximum allowed value</param>
+    /// <param name="propertyName">Name of the property for error messages</param>
+    /// <param name="mapName">Map name for error context</param>
+    /// <returns>True if valid, false otherwise</returns>
+    private bool ValidateFloatRange(float value, float min, float max, string propertyName, string mapName)
+    {
+        return value >= min && value <= max && !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+    
+    /// <summary>
+    /// Logs a validation warning using the debug system.
+    /// </summary>
+    /// <param name="message">Warning message to log</param>
+    private void LogValidationWarning(string message)
+    {
+        Core.AddDebugMessage($"[RoomManager Warning] {message}");
+    }
+    
+    /// <summary>
+    /// Logs debug information about QuadTree configuration.
+    /// </summary>
+    /// <param name="mapName">Map name</param>
+    /// <param name="config">Spatial configuration</param>
+    private void LogQuadTreeDebugInfo(string mapName, SpatialConfig config)
+    {
+        if (config.QuadTreeEnabled)
+        {
+            Core.AddDebugMessage($"Map '{mapName}': QuadTree enabled (exits/node: {config.MaxExitsPerNode}, depth: {config.MaxDepth}, radius: {config.ExitDetectionRadius:F1})");
+        }
+        else
+        {
+            Core.AddDebugMessage($"Map '{mapName}': QuadTree disabled, using linear search");
+        }
+    }
 }

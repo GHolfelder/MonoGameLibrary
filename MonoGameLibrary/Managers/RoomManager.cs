@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using MonoGameLibrary.Graphics;
@@ -18,6 +19,14 @@ public class RoomManager : RoomManagerBase
     private Vector2 _tilemapPosition;
     private QuadTree<ExitWrapper> _exitQuadTree;
     private Dictionary<string, CollisionObject> _exits;
+    
+    // QuadTree performance tracking
+    private int _quadTreeQueryCount;
+    private int _linearSearchCount;
+    private long _totalQuadTreeQueryTime; // in milliseconds
+    private long _totalLinearSearchTime; // in milliseconds
+    private System.Diagnostics.Stopwatch _performanceStopwatch = new();
+    private DateTime _lastPerformanceReset = DateTime.Now;
 
     /// <summary>
     /// Wrapper class to make CollisionObject compatible with QuadTree
@@ -160,10 +169,13 @@ public class RoomManager : RoomManagerBase
     /// </summary>
     private CollisionObject CheckExitCollisionsWithQuadTree(CharacterSprite player, SpatialConfig config)
     {
+        _performanceStopwatch.Restart();
+        
         var searchRadius = config.ExitDetectionRadius;
         var nearbyExits = new List<ExitWrapper>();
         
         _exitQuadTree.Query(player.Position, searchRadius, nearbyExits);
+        _quadTreeQueryCount++;
 
         foreach (var exitWrapper in nearbyExits)
         {
@@ -177,6 +189,9 @@ public class RoomManager : RoomManagerBase
 
             if (collision != null)
             {
+                _performanceStopwatch.Stop();
+                _totalQuadTreeQueryTime += _performanceStopwatch.ElapsedMilliseconds;
+                LogQuadTreePerformance(nearbyExits.Count, true);
                 return collision;
             }
 
@@ -191,10 +206,16 @@ public class RoomManager : RoomManagerBase
 
             if (collision != null)
             {
+                _performanceStopwatch.Stop();
+                _totalQuadTreeQueryTime += _performanceStopwatch.ElapsedMilliseconds;
+                LogQuadTreePerformance(nearbyExits.Count, true);
                 return collision;
             }
         }
-
+        
+        _performanceStopwatch.Stop();
+        _totalQuadTreeQueryTime += _performanceStopwatch.ElapsedMilliseconds;
+        LogQuadTreePerformance(nearbyExits.Count, false);
         return null;
     }
 
@@ -304,5 +325,72 @@ public class RoomManager : RoomManagerBase
 
         if (state.TryGetValue("MapConfigs", out var configs) && configs is Dictionary<string, SpatialConfig> mapConfigs)
             _mapConfigs = mapConfigs;
+    }
+    
+    /// <summary>
+    /// Logs QuadTree performance metrics for debugging.
+    /// </summary>
+    /// <param name="nearbyExitCount">Number of exits found in QuadTree query</param>
+    /// <param name="collisionFound">Whether a collision was detected</param>
+    private void LogQuadTreePerformance(int nearbyExitCount, bool collisionFound)
+    {
+        // Only log periodically to avoid spam
+        if (_quadTreeQueryCount % 60 == 0) // Every 60 queries (roughly once per second at 60fps)
+        {
+            var avgQueryTime = _totalQuadTreeQueryTime / (double)_quadTreeQueryCount;
+            Core.AddDebugMessage($"QuadTree: {_quadTreeQueryCount} queries, avg {avgQueryTime:F2}ms, found {nearbyExitCount} nearby exits");
+        }
+        
+        if (collisionFound && nearbyExitCount > 1)
+        {
+            Core.AddDebugMessage($"QuadTree: Collision found, checked {nearbyExitCount} exits");
+        }
+    }
+    
+    /// <summary>
+    /// Logs linear search performance metrics for debugging.
+    /// </summary>
+    /// <param name="collisionFound">Whether a collision was detected</param>
+    private void LogLinearSearchPerformance(bool collisionFound)
+    {
+        // Log periodically
+        if (_linearSearchCount % 60 == 0) // Every 60 searches
+        {
+            var avgSearchTime = _totalLinearSearchTime / (double)_linearSearchCount;
+            Core.AddDebugMessage($"Linear Search: {_linearSearchCount} searches, avg {avgSearchTime:F2}ms");
+        }
+        
+        if (collisionFound)
+        {
+            Core.AddDebugMessage("Linear Search: Collision found, checked all exits");
+        }
+    }
+    
+    /// <summary>
+    /// Resets performance tracking statistics.
+    /// </summary>
+    public void ResetPerformanceStats()
+    {
+        _quadTreeQueryCount = 0;
+        _linearSearchCount = 0;
+        _totalQuadTreeQueryTime = 0;
+        _totalLinearSearchTime = 0;
+        _lastPerformanceReset = DateTime.Now;
+        Core.AddDebugMessage("RoomManager: Performance statistics reset");
+    }
+    
+    /// <summary>
+    /// Gets performance statistics summary for debugging.
+    /// </summary>
+    /// <returns>Formatted string with performance metrics</returns>
+    public string GetPerformanceStats()
+    {
+        var timeSpan = DateTime.Now - _lastPerformanceReset;
+        var avgQuadTreeTime = _quadTreeQueryCount > 0 ? _totalQuadTreeQueryTime / (double)_quadTreeQueryCount : 0;
+        var avgLinearTime = _linearSearchCount > 0 ? _totalLinearSearchTime / (double)_linearSearchCount : 0;
+        
+        return $"RoomManager Performance (last {timeSpan.TotalSeconds:F0}s):\n" +
+               $"  QuadTree: {_quadTreeQueryCount} queries, avg {avgQuadTreeTime:F2}ms\n" +
+               $"  Linear: {_linearSearchCount} searches, avg {avgLinearTime:F2}ms";
     }
 }

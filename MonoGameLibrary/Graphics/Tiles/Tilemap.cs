@@ -1,281 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Graphics.Collision;
 
 namespace MonoGameLibrary.Graphics.Tiles;
 
 /// <summary>
-/// Represents a collection of tilemaps loaded from a single JSON file.
-/// </summary>
-public class TilemapCollection
-{
-    private readonly Dictionary<string, Tilemap> _tilemaps;
-    
-    public TilemapCollection()
-    {
-        _tilemaps = new Dictionary<string, Tilemap>(StringComparer.OrdinalIgnoreCase);
-    }
-    
-    /// <summary>
-    /// Gets all available map names.
-    /// </summary>
-    public IEnumerable<string> MapNames => _tilemaps.Keys;
-    
-    /// <summary>
-    /// Gets the number of maps in the collection.
-    /// </summary>
-    public int Count => _tilemaps.Count;
-    
-    /// <summary>
-    /// Gets a tilemap by name.
-    /// </summary>
-    /// <param name="mapName">The name of the map to retrieve.</param>
-    /// <returns>The tilemap with the specified name.</returns>
-    public Tilemap GetMap(string mapName)
-    {
-        if (_tilemaps.TryGetValue(mapName, out Tilemap tilemap))
-        {
-            return tilemap;
-        }
-        throw new ArgumentException($"Map '{mapName}' not found. Available maps: {string.Join(", ", MapNames)}");
-    }
-    
-    /// <summary>
-    /// Tries to get a tilemap by name.
-    /// </summary>
-    /// <param name="mapName">The name of the map to retrieve.</param>
-    /// <param name="tilemap">The tilemap if found.</param>
-    /// <returns>True if the map was found, false otherwise.</returns>
-    public bool TryGetMap(string mapName, out Tilemap tilemap)
-    {
-        return _tilemaps.TryGetValue(mapName, out tilemap);
-    }
-    
-    /// <summary>
-    /// Adds a tilemap to the collection.
-    /// </summary>
-    internal void AddMap(Tilemap tilemap)
-    {
-        _tilemaps[tilemap.Name] = tilemap;
-    }
-    
-    /// <summary>
-    /// Gets a tilemap by index (in order of addition).
-    /// </summary>
-    /// <param name="index">The index of the map.</param>
-    /// <returns>The tilemap at the specified index.</returns>
-    public Tilemap this[int index]
-    {
-        get
-        {
-            if (index < 0 || index >= _tilemaps.Count)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return _tilemaps.Values.ElementAt(index);
-        }
-    }
-    
-    /// <summary>
-    /// Gets a tilemap by name.
-    /// </summary>
-    /// <param name="mapName">The name of the map.</param>
-    /// <returns>The tilemap with the specified name.</returns>
-    public Tilemap this[string mapName] => GetMap(mapName);
-}
-
-/// <summary>
-/// Represents a single frame of a tile animation.
-/// </summary>
-public class AnimatedTileFrame
-{
-    public int TileId { get; set; }
-    public int Duration { get; set; }  // Duration in milliseconds
-    public int SourceX { get; set; }
-    public int SourceY { get; set; }
-    public int SourceWidth { get; set; }
-    public int SourceHeight { get; set; }
-}
-
-/// <summary>
-/// Represents an animated tile with its animation frames.
-/// </summary>
-public class AnimatedTile
-{
-    public int Id { get; set; }
-    public string Type { get; set; }
-    public string AtlasSprite { get; set; }
-    public List<AnimatedTileFrame> Animation { get; set; } = new();
-    public Dictionary<string, object> Properties { get; set; } = new();
-}
-
-/// <summary>
-/// Represents tile-specific data (collision objects, properties, etc.)
-/// </summary>
-public class TileData
-{
-    public int Id { get; set; }
-    public string Type { get; set; }
-    public object[] CollisionObjects { get; set; }
-    public Dictionary<string, object> Properties { get; set; } = new();
-}
-
-/// <summary>
-/// Manages animation state for an animated tile instance.
-/// </summary>
-public class AnimatedTileInstance
-{
-    private readonly AnimatedTile _animatedTile;
-    private readonly TextureRegion _atlasRegion;
-    private int _currentFrame;
-    private TimeSpan _elapsed;
-
-    public AnimatedTileInstance(AnimatedTile animatedTile, TextureRegion atlasRegion)
-    {
-        _animatedTile = animatedTile;
-        _atlasRegion = atlasRegion;
-        _currentFrame = 0;
-        _elapsed = TimeSpan.Zero;
-    }
-
-    public void Update(GameTime gameTime)
-    {
-        if (_animatedTile.Animation.Count < 2) return; // Need at least 2 frames for animation
-
-        _elapsed += gameTime.ElapsedGameTime;
-        
-        var currentAnimationFrame = _animatedTile.Animation[_currentFrame];
-        var frameDuration = TimeSpan.FromMilliseconds(currentAnimationFrame.Duration);
-        
-        if (_elapsed >= frameDuration)
-        {
-            _elapsed -= frameDuration;
-            _currentFrame = (_currentFrame + 1) % _animatedTile.Animation.Count;
-        }
-    }
-
-    public Rectangle GetCurrentSourceRectangle()
-    {
-        if (_animatedTile.Animation.Count == 0)
-            return _atlasRegion.SourceRectangle; // Fallback to first tile
-            
-        var frame = _animatedTile.Animation[_currentFrame];
-        
-        // Use animation frame coordinates relative to the atlas region
-        return new Rectangle(
-            _atlasRegion.SourceRectangle.X + frame.SourceX, 
-            _atlasRegion.SourceRectangle.Y + frame.SourceY, 
-            frame.SourceWidth, 
-            frame.SourceHeight);
-    }
-
-    public Texture2D Texture => _atlasRegion.Texture;
-}
-
-/// <summary>
-/// Represents a single tile layer in a tilemap.
-/// </summary>
-public class TileLayer
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public float Opacity { get; set; } = 1.0f;
-    public bool Visible { get; set; } = true;
-    public float OffsetX { get; set; }
-    public float OffsetY { get; set; }
-    public int[] Tiles { get; set; }
-    public Dictionary<string, object> Properties { get; set; } = new();
-}
-
-/// <summary>
-/// Represents a tileset definition within a tilemap.
-/// </summary>
-public class TilesetDefinition
-{
-    public string Name { get; set; }
-    public int FirstGid { get; set; }
-    public int TileWidth { get; set; }
-    public int TileHeight { get; set; }
-    public int TileCount { get; set; }
-    public int Columns { get; set; }
-    public int Margin { get; set; }
-    public int Spacing { get; set; }
-    public string AtlasSprite { get; set; }
-    public List<AnimatedTile> Tiles { get; set; } = new();
-    public Dictionary<string, object> Properties { get; set; } = new();
-}
-
-/// <summary>
-/// Represents the type of shape for a collision object.
-/// </summary>
-public enum CollisionObjectType
-{
-    Rectangle,
-    Ellipse,
-    Point,
-    Polygon,
-    Polyline,
-    Tile,
-    Text
-}
-
-/// <summary>
-/// Represents a collision object within an object layer.
-/// </summary>
-public class CollisionObject
-{
-    public string Name { get; set; }
-    public string Type { get; set; }
-    public Vector2 Position { get; set; }
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public CollisionObjectType ShapeType { get; set; } = CollisionObjectType.Rectangle;
-    public Vector2[] PolygonPoints { get; set; } = Array.Empty<Vector2>();
-    public float Rotation { get; set; } = 0f;
-    public Dictionary<string, object> Properties { get; set; } = new();
-    public string TextContent { get; set; } = string.Empty;
-    public int Gid { get; set; } = 0; // Tile GID for tile objects
-    
-    /// <summary>
-    /// Cached collision shape for performance optimization.
-    /// Created lazily on first collision detection.
-    /// </summary>
-    internal ICollisionShape _cachedCollisionShape;
-    
-    /// <summary>
-    /// Gets the radius for circular/elliptical objects (uses Width as diameter).
-    /// </summary>
-    public float Radius => Width * 0.5f;
-    
-    /// <summary>
-    /// Gets whether this object is circular (ellipse with approximately equal width and height).
-    /// Allows for small floating point differences.
-    /// </summary>
-    public bool IsCircle => ShapeType == CollisionObjectType.Ellipse && Math.Abs(Width - Height) <= 1.0f;
-}
-
-/// <summary>
-/// Represents an object layer containing collision objects.
-/// </summary>
-public class ObjectLayer
-{
-    public string Name { get; set; }
-    public bool Visible { get; set; } = true;
-    public float Opacity { get; set; } = 1.0f;
-    public List<CollisionObject> Objects { get; set; } = new();
-    public Dictionary<string, object> Properties { get; set; } = new();
-}
-
-/// <summary>
 /// The enhanced Tilemap class with support for multiple layers and z-ordering.
+/// Core tilemap functionality - rendering, layer management, and data access.
 /// </summary>
-public class Tilemap
+public partial class Tilemap
 {
     private readonly List<TileLayer> _tileLayers;
     private readonly List<TilesetDefinition> _tilesetDefinitions;
@@ -320,6 +56,11 @@ public class Tilemap
     /// Gets the background color of the map.
     /// </summary>
     public Color? BackgroundColor { get; private set; }
+
+    /// <summary>
+    /// Gets or sets additional arbitrary properties for the tilemap.
+    /// </summary>
+    public Dictionary<string, object> Properties { get; set; } = new();
 
     /// <summary>
     /// Gets the tile layers in rendering order (back to front).
@@ -372,512 +113,6 @@ public class Tilemap
         _animatedTiles = new Dictionary<int, AnimatedTile>();
         _tileData = new Dictionary<int, TileData>();
         _animatedTileInstances = new Dictionary<string, Dictionary<int, AnimatedTileInstance>>();
-    }
-
-    /// <summary>
-    /// Creates a collection of tilemaps by loading and parsing a JSON file with a pre-loaded texture atlas.
-    /// Expects a JSON array of map objects.
-    /// </summary>
-    /// <param name="content">The content manager to use for loading resources.</param>
-    /// <param name="jsonFilename">The JSON file path relative to the content directory.</param>
-    /// <param name="textureAtlas">The pre-loaded texture atlas containing tile sprites.</param>
-    /// <returns>A TilemapCollection containing all maps loaded from JSON.</returns>
-    public static TilemapCollection FromJson(ContentManager content, string jsonFilename, TextureAtlas textureAtlas)
-    {
-        string jsonPath = Path.Combine(content.RootDirectory, jsonFilename);
-        
-        using (Stream jsonStream = TitleContainer.OpenStream(jsonPath))
-        {
-            using (StreamReader reader = new StreamReader(jsonStream))
-            {
-                string jsonContent = reader.ReadToEnd();
-                JsonDocument document = JsonDocument.Parse(jsonContent);
-                JsonElement root = document.RootElement;
-
-                var collection = new TilemapCollection();
-
-                // Expect JSON array format: [{ "name": "map1", ... }, { "name": "map2", ... }]
-                if (root.ValueKind == JsonValueKind.Array)
-                {
-                    LoadFromMapsArrayFormat(root, textureAtlas, collection);
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Invalid JSON tilemap format in file: {jsonFilename}. Expected array of map objects.");
-                }
-
-                if (collection.Count == 0)
-                {
-                    throw new InvalidOperationException($"No valid maps found in JSON file: {jsonFilename}");
-                }
-
-                return collection;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Loads maps from array format: [{ "name": "map1", ... }, { "name": "map2", ... }]
-    /// </summary>
-    private static void LoadFromMapsArrayFormat(JsonElement mapsArray, TextureAtlas textureAtlas, TilemapCollection collection)
-    {
-        foreach (JsonElement mapElement in mapsArray.EnumerateArray())
-        {
-            // Extract map name from the map element
-            string mapName = mapElement.TryGetProperty("name", out JsonElement nameElement) 
-                ? nameElement.GetString() 
-                : $"Map_{collection.Count}"; // Fallback name if none specified
-                
-            Tilemap tilemap = LoadSingleMapFromJson(mapElement, textureAtlas, mapName);
-            collection.AddMap(tilemap);
-        }
-    }
-
-    /// <summary>
-    /// Loads a single map from a JSON element.
-    /// </summary>
-    private static Tilemap LoadSingleMapFromJson(JsonElement mapElement, TextureAtlas textureAtlas, string mapName)
-    {
-        // Parse map properties
-        string name = mapElement.TryGetProperty("name", out JsonElement nameElement) ? nameElement.GetString() : mapName;
-        int width = mapElement.GetProperty("width").GetInt32();
-        int height = mapElement.GetProperty("height").GetInt32();
-        int tileWidth = mapElement.GetProperty("tileWidth").GetInt32();
-        int tileHeight = mapElement.GetProperty("tileHeight").GetInt32();
-        string orientation = mapElement.GetProperty("orientation").GetString();
-        
-        // Create the tilemap
-        Tilemap tilemap = new Tilemap(name, width, height, tileWidth, tileHeight, orientation, textureAtlas);
-
-        // Parse background color if present
-        if (mapElement.TryGetProperty("backgroundColor", out JsonElement bgColorElement) && bgColorElement.ValueKind != JsonValueKind.Null)
-        {
-            string bgColorHex = bgColorElement.GetString();
-            if (!string.IsNullOrEmpty(bgColorHex))
-            {
-                tilemap.BackgroundColor = ParseColor(bgColorHex);
-            }
-        }
-
-        // Parse tilesets
-        if (mapElement.TryGetProperty("tilesets", out JsonElement tilesetsElement))
-        {
-            foreach (JsonElement tilesetElement in tilesetsElement.EnumerateArray())
-            {
-                tilemap.LoadTilesetFromJson(tilesetElement);
-            }
-        }
-
-        // Parse tile layers
-        if (mapElement.TryGetProperty("tileLayers", out JsonElement layersElement))
-        {
-            foreach (JsonElement layerElement in layersElement.EnumerateArray())
-            {
-                tilemap.LoadTileLayerFromJson(layerElement);
-            }
-        }
-
-        // Parse object layers
-        if (mapElement.TryGetProperty("objectLayers", out JsonElement objectLayersElement))
-        {
-            foreach (JsonElement objectLayerElement in objectLayersElement.EnumerateArray())
-            {
-                tilemap.LoadObjectLayerFromJson(objectLayerElement);
-            }
-        }
-
-        return tilemap;
-    }
-
-    /// <summary>
-    /// Loads a tileset definition from JSON and creates the corresponding Tileset.
-    /// </summary>
-    private void LoadTilesetFromJson(JsonElement tilesetElement)
-    {
-        var tilesetDef = new TilesetDefinition
-        {
-            Name = tilesetElement.GetProperty("name").GetString(),
-            FirstGid = tilesetElement.GetProperty("firstGid").GetInt32(),
-            TileWidth = tilesetElement.GetProperty("tileWidth").GetInt32(),
-            TileHeight = tilesetElement.GetProperty("tileHeight").GetInt32(),
-            TileCount = tilesetElement.GetProperty("tileCount").GetInt32(),
-            Columns = tilesetElement.GetProperty("columns").GetInt32(),
-            Margin = tilesetElement.GetProperty("margin").GetInt32(),
-            Spacing = tilesetElement.GetProperty("spacing").GetInt32(),
-            AtlasSprite = tilesetElement.GetProperty("atlasSprite").GetString()
-        };
-
-        // Parse tiles array for animated tiles
-        if (tilesetElement.TryGetProperty("tiles", out JsonElement tilesElement))
-        {
-            foreach (JsonElement tileElement in tilesElement.EnumerateArray())
-            {
-                var animatedTile = new AnimatedTile();
-                
-                if (tileElement.TryGetProperty("id", out JsonElement idElement))
-                    animatedTile.Id = idElement.GetInt32();
-                    
-                if (tileElement.TryGetProperty("type", out JsonElement typeElement))
-                    animatedTile.Type = typeElement.GetString();
-                    
-                if (tileElement.TryGetProperty("atlasSprite", out JsonElement atlasSpriteElement))
-                    animatedTile.AtlasSprite = atlasSpriteElement.GetString();
-                
-                // Parse animation frames
-                if (tileElement.TryGetProperty("animation", out JsonElement animationElement) && animationElement.ValueKind != JsonValueKind.Null)
-                {
-                    foreach (JsonElement frameElement in animationElement.EnumerateArray())
-                    {
-                        var frame = new AnimatedTileFrame();
-                        
-                        if (frameElement.TryGetProperty("tileId", out JsonElement tileIdElement))
-                            frame.TileId = tileIdElement.GetInt32();
-                            
-                        if (frameElement.TryGetProperty("duration", out JsonElement durationElement))
-                            frame.Duration = durationElement.GetInt32();
-                            
-                        if (frameElement.TryGetProperty("sourceX", out JsonElement sourceXElement))
-                            frame.SourceX = sourceXElement.GetInt32();
-                            
-                        if (frameElement.TryGetProperty("sourceY", out JsonElement sourceYElement))
-                            frame.SourceY = sourceYElement.GetInt32();
-                            
-                        if (frameElement.TryGetProperty("sourceWidth", out JsonElement sourceWidthElement))
-                            frame.SourceWidth = sourceWidthElement.GetInt32();
-                            
-                        if (frameElement.TryGetProperty("sourceHeight", out JsonElement sourceHeightElement))
-                            frame.SourceHeight = sourceHeightElement.GetInt32();
-                        
-                        animatedTile.Animation.Add(frame);
-                    }
-                }
-                
-                // Parse collision objects for this tile
-                if (tileElement.TryGetProperty("collisionObjects", out JsonElement collisionObjectsElement) && collisionObjectsElement.ValueKind != JsonValueKind.Null)
-                {
-                    var collisionObjectsList = new List<object>();
-                    
-                    foreach (JsonElement collisionObjElement in collisionObjectsElement.EnumerateArray())
-                    {
-                        var collisionObject = new CollisionObject();
-                        
-                        // Parse collision object properties
-                        if (collisionObjElement.TryGetProperty("name", out JsonElement objNameElement))
-                            collisionObject.Name = objNameElement.GetString();
-                        
-                        if (collisionObjElement.TryGetProperty("type", out JsonElement objTypeElement))
-                            collisionObject.Type = objTypeElement.GetString();
-                        
-                        if (collisionObjElement.TryGetProperty("x", out JsonElement xElement))
-                            collisionObject.Position = new Vector2((float)Math.Truncate(xElement.GetSingle()), collisionObject.Position.Y);
-                        
-                        if (collisionObjElement.TryGetProperty("y", out JsonElement yElement))
-                            collisionObject.Position = new Vector2(collisionObject.Position.X, (float)Math.Truncate(yElement.GetSingle()));
-                        
-                        if (collisionObjElement.TryGetProperty("width", out JsonElement widthElement))
-                            collisionObject.Width = (int)Math.Truncate(widthElement.GetSingle());
-                        
-                        if (collisionObjElement.TryGetProperty("height", out JsonElement heightElement))
-                            collisionObject.Height = (int)Math.Truncate(heightElement.GetSingle());
-                        
-                        if (collisionObjElement.TryGetProperty("rotation", out JsonElement rotationElement))
-                            collisionObject.Rotation = rotationElement.GetSingle();
-                        
-                        if (collisionObjElement.TryGetProperty("gid", out JsonElement gidElement))
-                            collisionObject.Gid = gidElement.GetInt32();
-                        
-                        // Determine shape type
-                        if (collisionObjElement.TryGetProperty("objectType", out JsonElement objectTypeElement))
-                        {
-                            string objectType = objectTypeElement.GetString()?.ToLowerInvariant();
-                            collisionObject.ShapeType = objectType switch
-                            {
-                                "rectangle" => CollisionObjectType.Rectangle,
-                                "ellipse" => CollisionObjectType.Ellipse,
-                                "point" => CollisionObjectType.Point,
-                                "polygon" => CollisionObjectType.Polygon,
-                                "polyline" => CollisionObjectType.Polyline,
-                                "tile" => CollisionObjectType.Tile,
-                                "text" => CollisionObjectType.Text,
-                                _ => CollisionObjectType.Rectangle
-                            };
-                        }
-                        else
-                        {
-                            // Legacy shape detection
-                            if (collisionObjElement.TryGetProperty("polygon", out JsonElement polygonElement) && polygonElement.ValueKind == JsonValueKind.Array)
-                            {
-                                collisionObject.ShapeType = CollisionObjectType.Polygon;
-                            }
-                            else if (collisionObjElement.TryGetProperty("polyline", out JsonElement polylineElement) && polylineElement.ValueKind == JsonValueKind.Array)
-                            {
-                                collisionObject.ShapeType = CollisionObjectType.Polyline;
-                            }
-                            else if (collisionObject.Width == 0 && collisionObject.Height == 0)
-                            {
-                                collisionObject.ShapeType = CollisionObjectType.Point;
-                            }
-                            else if (collisionObjElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
-                            {
-                                collisionObject.ShapeType = CollisionObjectType.Ellipse;
-                            }
-                            else
-                            {
-                                collisionObject.ShapeType = CollisionObjectType.Rectangle;
-                            }
-                        }
-                        
-                        // Parse polygon/polyline points
-                        if (collisionObjElement.TryGetProperty("polygon", out JsonElement polygonElement2) && polygonElement2.ValueKind == JsonValueKind.Array)
-                        {
-                            collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement2);
-                        }
-                        else if (collisionObjElement.TryGetProperty("polyline", out JsonElement polylineElement2) && polylineElement2.ValueKind == JsonValueKind.Array)
-                        {
-                            collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement2);
-                        }
-                        
-                        // Parse properties if they exist
-                        if (collisionObjElement.TryGetProperty("properties", out JsonElement propertiesElement))
-                        {
-                            foreach (JsonProperty property in propertiesElement.EnumerateObject())
-                            {
-                                collisionObject.Properties[property.Name] = property.Value.ToString();
-                            }
-                        }
-                        
-                        collisionObjectsList.Add(collisionObject);
-                    }
-                    
-                    // Store collision objects separately
-                    int globalGid = tilesetDef.FirstGid + animatedTile.Id;
-                    var tileData = new TileData
-                    {
-                        CollisionObjects = collisionObjectsList.ToArray()
-                    };
-                    _tileData[globalGid] = tileData;
-                }
-                
-                // Register tiles that have animation (multiple frames)
-                bool hasAnimation = animatedTile.Animation.Count >= 2;
-                
-                if (hasAnimation)
-                {
-                    int globalGid = tilesetDef.FirstGid + animatedTile.Id;
-                    _animatedTiles[globalGid] = animatedTile;
-                }
-                
-                tilesetDef.Tiles.Add(animatedTile);
-            }
-        }
-
-        _tilesetDefinitions.Add(tilesetDef);
-
-        // Create tileset from atlas sprite
-        TextureRegion atlasRegion = _textureAtlas.GetRegion(tilesetDef.AtlasSprite);
-        
-        ITileset tileset;
-        if (tilesetDef.Spacing > 0 || tilesetDef.Margin > 0)
-        {
-            tileset = new SpacedTileset(atlasRegion, tilesetDef.TileWidth, tilesetDef.TileHeight, tilesetDef.Spacing, tilesetDef.Margin);
-        }
-        else
-        {
-            tileset = new Tileset(atlasRegion, tilesetDef.TileWidth, tilesetDef.TileHeight);
-        }
-
-        _tilesets[tilesetDef.FirstGid] = tileset;
-    }
-
-    /// <summary>
-    /// Loads a tile layer from JSON.
-    /// </summary>
-    private void LoadTileLayerFromJson(JsonElement layerElement)
-    {
-        var layer = new TileLayer
-        {
-            Id = layerElement.GetProperty("id").GetInt32(),
-            Name = layerElement.GetProperty("name").GetString(),
-            Width = layerElement.GetProperty("width").GetInt32(),
-            Height = layerElement.GetProperty("height").GetInt32(),
-            Opacity = layerElement.GetProperty("opacity").GetSingle(),
-            Visible = layerElement.GetProperty("visible").GetBoolean(),
-            OffsetX = layerElement.GetProperty("offsetX").GetSingle(),
-            OffsetY = layerElement.GetProperty("offsetY").GetSingle()
-        };
-
-        // Load tile data
-        JsonElement tilesElement = layerElement.GetProperty("tiles");
-        layer.Tiles = new int[tilesElement.GetArrayLength()];
-        int index = 0;
-        foreach (JsonElement tileElement in tilesElement.EnumerateArray())
-        {
-            layer.Tiles[index++] = tileElement.GetInt32();
-        }
-
-        // Create animated tile instances for this layer
-        CreateAnimatedTileInstances(layer);
-
-        _tileLayers.Add(layer);
-    }
-
-    /// <summary>
-    /// Loads an object layer from JSON.
-    /// </summary>
-    private void LoadObjectLayerFromJson(JsonElement objectLayerElement)
-    {
-        var objectLayer = new ObjectLayer();
-        
-        // Load basic layer properties
-        if (objectLayerElement.TryGetProperty("name", out JsonElement nameElement))
-            objectLayer.Name = nameElement.GetString();
-        
-        if (objectLayerElement.TryGetProperty("visible", out JsonElement visibleElement))
-            objectLayer.Visible = visibleElement.GetBoolean();
-        
-        if (objectLayerElement.TryGetProperty("opacity", out JsonElement opacityElement))
-            objectLayer.Opacity = opacityElement.GetSingle();
-        
-        // Load objects array
-        if (objectLayerElement.TryGetProperty("objects", out JsonElement objectsElement))
-        {
-            foreach (JsonElement objElement in objectsElement.EnumerateArray())
-            {
-                var collisionObject = new CollisionObject();
-                
-                // Load basic object properties
-                if (objElement.TryGetProperty("name", out JsonElement objNameElement))
-                    collisionObject.Name = objNameElement.GetString();
-                
-                if (objElement.TryGetProperty("type", out JsonElement objTypeElement))
-                    collisionObject.Type = objTypeElement.GetString();
-                
-                if (objElement.TryGetProperty("x", out JsonElement xElement))
-                    collisionObject.Position = new Vector2((float)Math.Truncate(xElement.GetSingle()), collisionObject.Position.Y);
-                
-                if (objElement.TryGetProperty("y", out JsonElement yElement))
-                    collisionObject.Position = new Vector2(collisionObject.Position.X, (float)Math.Truncate(yElement.GetSingle()));
-                
-                if (objElement.TryGetProperty("width", out JsonElement widthElement))
-                    collisionObject.Width = (int)Math.Truncate(widthElement.GetSingle());
-                
-                if (objElement.TryGetProperty("height", out JsonElement heightElement))
-                    collisionObject.Height = (int)Math.Truncate(heightElement.GetSingle());
-                
-                if (objElement.TryGetProperty("rotation", out JsonElement rotationElement))
-                    collisionObject.Rotation = rotationElement.GetSingle();
-                
-                if (objElement.TryGetProperty("gid", out JsonElement gidElement))
-                    collisionObject.Gid = gidElement.GetInt32();
-                
-                // Determine shape type based on objectType property first, then fallback to legacy detection
-                if (objElement.TryGetProperty("objectType", out JsonElement objectTypeElement))
-                {
-                    string objectType = objectTypeElement.GetString()?.ToLowerInvariant();
-                    collisionObject.ShapeType = objectType switch
-                    {
-                        "rectangle" => CollisionObjectType.Rectangle,
-                        "ellipse" => CollisionObjectType.Ellipse,
-                        "point" => CollisionObjectType.Point,
-                        "polygon" => CollisionObjectType.Polygon,
-                        "polyline" => CollisionObjectType.Polyline,
-                        "tile" => CollisionObjectType.Tile,
-                        "text" => CollisionObjectType.Text,
-                        _ => CollisionObjectType.Rectangle // Default fallback
-                    };
-                }
-                else
-                {
-                    // Legacy shape detection for objects without objectType property
-                    if (objElement.TryGetProperty("polygon", out JsonElement polygonElement) && polygonElement.ValueKind == JsonValueKind.Array)
-                    {
-                        collisionObject.ShapeType = CollisionObjectType.Polygon;
-                    }
-                    else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement) && polylineElement.ValueKind == JsonValueKind.Array)
-                    {
-                        collisionObject.ShapeType = CollisionObjectType.Polyline;
-                    }
-                    else if (collisionObject.Width == 0 && collisionObject.Height == 0)
-                    {
-                        collisionObject.ShapeType = CollisionObjectType.Point;
-                    }
-                    else if (objElement.TryGetProperty("ellipse", out JsonElement ellipseElement) && ellipseElement.GetBoolean())
-                    {
-                        collisionObject.ShapeType = CollisionObjectType.Ellipse;
-                    }
-                    else if (collisionObject.Name != null && 
-                             (collisionObject.Name.Contains("Ellipse", StringComparison.OrdinalIgnoreCase) ||
-                              collisionObject.Name.Contains("Circle", StringComparison.OrdinalIgnoreCase)))
-                    {
-                        collisionObject.ShapeType = CollisionObjectType.Ellipse;
-                    }
-                    else
-                    {
-                        collisionObject.ShapeType = CollisionObjectType.Rectangle;
-                    }
-                }
-                
-                // Parse polygon/polyline points regardless of how shape type was determined
-                if (objElement.TryGetProperty("polygon", out JsonElement polygonElement2) && polygonElement2.ValueKind == JsonValueKind.Array)
-                {
-                    collisionObject.PolygonPoints = ParsePolygonPoints(polygonElement2);
-                }
-                else if (objElement.TryGetProperty("polyline", out JsonElement polylineElement2) && polylineElement2.ValueKind == JsonValueKind.Array)
-                {
-                    collisionObject.PolygonPoints = ParsePolygonPoints(polylineElement2);
-                }
-                
-                // Parse text content for text objects
-                if (objElement.TryGetProperty("text", out JsonElement textElement) && textElement.ValueKind == JsonValueKind.Object)
-                {
-                    if (textElement.TryGetProperty("content", out JsonElement contentElement))
-                    {
-                        collisionObject.TextContent = contentElement.GetString() ?? string.Empty;
-                    }
-                }
-                
-                // Load custom properties if they exist
-                if (objElement.TryGetProperty("properties", out JsonElement propertiesElement))
-                {
-                    foreach (JsonProperty property in propertiesElement.EnumerateObject())
-                    {
-                        collisionObject.Properties[property.Name] = property.Value.ToString();
-                    }
-                }
-                
-                objectLayer.Objects.Add(collisionObject);
-            }
-        }
-        
-        // Load layer properties if they exist
-        if (objectLayerElement.TryGetProperty("properties", out JsonElement layerPropertiesElement))
-        {
-            foreach (JsonProperty property in layerPropertiesElement.EnumerateObject())
-            {
-                objectLayer.Properties[property.Name] = property.Value.ToString();
-            }
-        }
-        
-        _objectLayers.Add(objectLayer);
-    }
-
-    /// <summary>
-    /// Parses polygon points from JSON element.
-    /// </summary>
-    private static Vector2[] ParsePolygonPoints(JsonElement polygonElement)
-    {
-        var points = new List<Vector2>();
-        
-        foreach (JsonElement pointElement in polygonElement.EnumerateArray())
-        {
-            if (pointElement.TryGetProperty("x", out JsonElement xElement) &&
-                pointElement.TryGetProperty("y", out JsonElement yElement))
-            {
-                points.Add(new Vector2(xElement.GetSingle(), yElement.GetSingle()));
-            }
-        }
-        
-        return points.ToArray();
     }
 
     /// <summary>
@@ -970,10 +205,10 @@ public class Tilemap
     /// <param name="position">The position to draw the tilemap at.</param>
     public void Draw(SpriteBatch spriteBatch, Vector2 position)
     {
-        foreach (var layer in _tileLayers)
+        var layersInOrder = GetLayersInRenderOrder();
+        foreach (var layer in layersInOrder)
         {
             if (!layer.Visible) continue;
-
             DrawLayer(spriteBatch, layer, position);
         }
     }
@@ -1029,35 +264,81 @@ public class Tilemap
     }
 
     /// <summary>
-    /// Draws layers up to a specified layer index (useful for character rendering between layers).
+    /// Draws layers up to a specified layer index (inclusive) in render order.
     /// </summary>
     /// <param name="spriteBatch">The sprite batch to draw with.</param>
     /// <param name="position">The position to draw the tilemap at.</param>
     /// <param name="upToLayerIndex">The maximum layer index to draw (inclusive).</param>
     public void DrawLayersUpTo(SpriteBatch spriteBatch, Vector2 position, int upToLayerIndex)
     {
-        for (int i = 0; i <= upToLayerIndex && i < _tileLayers.Count; i++)
+        int upToRenderIndex = GetRenderIndex(upToLayerIndex);
+        if (upToRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = 0; i <= upToRenderIndex && i < layersInOrder.Count; i++)
         {
-            var layer = _tileLayers[i];
+            var layer = layersInOrder[i];
             if (!layer.Visible) continue;
-
             DrawLayer(spriteBatch, layer, position);
         }
     }
 
     /// <summary>
-    /// Draws layers from a specified layer index onwards (useful for foreground layers).
+    /// Draws layers from a specified layer index onwards (inclusive) in render order.
     /// </summary>
     /// <param name="spriteBatch">The sprite batch to draw with.</param>
     /// <param name="position">The position to draw the tilemap at.</param>
     /// <param name="fromLayerIndex">The minimum layer index to draw (inclusive).</param>
     public void DrawLayersFrom(SpriteBatch spriteBatch, Vector2 position, int fromLayerIndex)
     {
-        for (int i = fromLayerIndex; i < _tileLayers.Count; i++)
+        int fromRenderIndex = GetRenderIndex(fromLayerIndex);
+        if (fromRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = fromRenderIndex; i < layersInOrder.Count; i++)
         {
-            var layer = _tileLayers[i];
+            var layer = layersInOrder[i];
             if (!layer.Visible) continue;
+            DrawLayer(spriteBatch, layer, position);
+        }
+    }
 
+    /// <summary>
+    /// Draws layers up to a specified layer name (inclusive) in render order.
+    /// </summary>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position to draw the tilemap at.</param>
+    /// <param name="upToLayerName">The name of the last layer to draw.</param>
+    public void DrawLayersUpTo(SpriteBatch spriteBatch, Vector2 position, string upToLayerName)
+    {
+        int upToRenderIndex = GetRenderIndex(upToLayerName);
+        if (upToRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = 0; i <= upToRenderIndex && i < layersInOrder.Count; i++)
+        {
+            var layer = layersInOrder[i];
+            if (!layer.Visible) continue;
+            DrawLayer(spriteBatch, layer, position);
+        }
+    }
+
+    /// <summary>
+    /// Draws layers from a specified layer name onwards (inclusive) in render order.
+    /// </summary>
+    /// <param name="spriteBatch">The sprite batch to draw with.</param>
+    /// <param name="position">The position to draw the tilemap at.</param>
+    /// <param name="fromLayerName">The name of the first layer to draw.</param>
+    public void DrawLayersFrom(SpriteBatch spriteBatch, Vector2 position, string fromLayerName)
+    {
+        int fromRenderIndex = GetRenderIndex(fromLayerName);
+        if (fromRenderIndex == -1) return;
+        
+        var layersInOrder = GetLayersInRenderOrder();
+        for (int i = fromRenderIndex; i < layersInOrder.Count; i++)
+        {
+            var layer = layersInOrder[i];
+            if (!layer.Visible) continue;
             DrawLayer(spriteBatch, layer, position);
         }
     }
@@ -1119,11 +400,51 @@ public class Tilemap
     /// <param name="gid">The global tile ID.</param>
     /// <param name="tileData">The tile data if found.</param>
     /// <returns>True if tile data was found for this GID.</returns>
-    internal bool GetTileData(int gid, out TileData tileData)
+    public bool GetTileData(int gid, out TileData tileData)
     {
         return _tileData.TryGetValue(gid, out tileData);
     }
+    /// <summary>
+    /// Gets the tile data at a specific tile position in a layer.
+    /// </summary>
+    /// <param name="layerName">The name of the tile layer.</param>
+    /// <param name="tileX">The X tile coordinate.</param>
+    /// <param name="tileY">The Y tile coordinate.</param>
+    /// <returns>The tile data if found, null otherwise.</returns>
+    public TileData GetTileDataAt(string layerName, int tileX, int tileY)
+    {
+        var layer = GetLayerByName(layerName);
+        if (layer == null || tileX < 0 || tileY < 0 || tileX >= layer.Width || tileY >= layer.Height)
+            return null;
+            
+        int tileIndex = tileY * layer.Width + tileX;
+        if (tileIndex >= layer.Tiles.Length)
+            return null;
+            
+        int gid = layer.Tiles[tileIndex];
+        return gid == 0 ? null : (_tileData.TryGetValue(gid, out TileData tileData) ? tileData : null);
+    }
 
+    /// <summary>
+    /// Gets the tile data at a specific tile position in a layer by layer index.
+    /// </summary>
+    /// <param name="layerIndex">The index of the tile layer.</param>
+    /// <param name="tileX">The X tile coordinate.</param>
+    /// <param name="tileY">The Y tile coordinate.</param>
+    /// <returns>The tile data if found, null otherwise.</returns>
+    public TileData GetTileDataAt(int layerIndex, int tileX, int tileY)
+    {
+        var layer = GetLayerByIndex(layerIndex);
+        if (layer == null || tileX < 0 || tileY < 0 || tileX >= layer.Width || tileY >= layer.Height)
+            return null;
+            
+        int tileIndex = tileY * layer.Width + tileX;
+        if (tileIndex >= layer.Tiles.Length)
+            return null;
+            
+        int gid = layer.Tiles[tileIndex];
+        return gid == 0 ? null : (_tileData.TryGetValue(gid, out TileData tileData) ? tileData : null);
+    }
     /// <summary>
     /// Gets collision objects from a specific object layer or all object layers.
     /// </summary>
@@ -1173,22 +494,148 @@ public class Tilemap
     }
 
     /// <summary>
-    /// Parses a hex color string to a Color.
+    /// Gets a tilemap property value with type conversion.
     /// </summary>
-    private static Color ParseColor(string hexColor)
+    /// <typeparam name="T">The type to convert to.</typeparam>
+    /// <param name="key">The property key.</param>
+    /// <param name="defaultValue">The default value if not found or conversion fails.</param>
+    /// <returns>The property value or default value.</returns>
+    public T GetProperty<T>(string key, T defaultValue = default(T))
     {
-        if (string.IsNullOrEmpty(hexColor)) return Color.Transparent;
-        
-        hexColor = hexColor.TrimStart('#');
-        if (hexColor.Length == 6)
+        if (!Properties.TryGetValue(key, out var value))
+            return defaultValue;
+            
+        if (value is T directValue)
+            return directValue;
+            
+        // Handle string to primitive conversions
+        if (value is string stringValue && typeof(T) != typeof(string))
         {
-            return new Color(
-                Convert.ToByte(hexColor.Substring(0, 2), 16),
-                Convert.ToByte(hexColor.Substring(2, 2), 16),
-                Convert.ToByte(hexColor.Substring(4, 2), 16)
-            );
+            try
+            {
+                return (T)Convert.ChangeType(stringValue, typeof(T));
+            }
+            catch
+            {
+                return defaultValue;
+            }
         }
         
-        return Color.Transparent;
+        return defaultValue;
     }
+    
+    /// <summary>
+    /// Sets a tilemap property value.
+    /// </summary>
+    /// <param name="key">The property key.</param>
+    /// <param name="value">The property value.</param>
+    public void SetProperty(string key, object value)
+    {
+        Properties[key] = value;
+    }
+    
+    /// <summary>
+    /// Checks if a tilemap property exists.
+    /// </summary>
+    /// <param name="key">The property key.</param>
+    /// <returns>True if the property exists.</returns>
+    public bool HasProperty(string key)
+    {
+        return Properties.ContainsKey(key);
+    }
+
+    /// <summary>
+    /// Gets the parsed render order from properties.
+    /// </summary>
+    private List<string> GetRenderOrder()
+    {
+        if (!Properties.TryGetValue("renderOrder", out var renderOrderValue) || 
+            renderOrderValue is not string renderOrderCsv || 
+            string.IsNullOrWhiteSpace(renderOrderCsv))
+        {
+            return null;
+        }
+        
+        return renderOrderCsv.Split(',')
+            .Select(name => name.Trim())
+            .Where(name => !string.IsNullOrEmpty(name))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gets layers in the specified render order.
+    /// </summary>
+    private List<TileLayer> GetLayersInRenderOrder()
+    {
+        var renderOrder = GetRenderOrder();
+        if (renderOrder == null || renderOrder.Count == 0)
+        {
+            return _tileLayers.ToList();
+        }
+
+        var orderedLayers = new List<TileLayer>();
+        foreach (string layerName in renderOrder)
+        {
+            var layer = GetLayerByName(layerName);
+            if (layer != null)
+            {
+                orderedLayers.Add(layer);
+            }
+        }
+        return orderedLayers;
+    }
+
+    /// <summary>
+    /// Gets the render index of a layer by name.
+    /// </summary>
+    private int GetRenderIndex(string layerName)
+    {
+        var renderOrder = GetRenderOrder();
+        if (renderOrder == null || renderOrder.Count == 0)
+        {
+            var layer = GetLayerByName(layerName);
+            return layer != null ? _tileLayers.IndexOf(layer) : -1;
+        }
+        
+        return renderOrder.IndexOf(layerName);
+    }
+
+    /// <summary>
+    /// Gets the render index of a layer by its data index.
+    /// </summary>
+    private int GetRenderIndex(int layerIndex)
+    {
+        if (layerIndex < 0 || layerIndex >= _tileLayers.Count)
+            return -1;
+            
+        string layerName = _tileLayers[layerIndex].Name;
+        return GetRenderIndex(layerName);
+    }
+
+    /// <summary>
+    /// Sets the render order for tile layers.
+    /// </summary>
+    /// <param name="layerNames">Comma-separated layer names in render order.</param>
+    public void SetRenderOrder(string layerNames)
+    {
+        Properties["renderOrder"] = layerNames;
+    }
+
+    /// <summary>
+    /// Sets the render order for tile layers.
+    /// </summary>
+    /// <param name="layerNames">List of layer names in render order.</param>
+    public void SetRenderOrder(IEnumerable<string> layerNames)
+    {
+        Properties["renderOrder"] = string.Join(", ", layerNames);
+    }
+
+    /// <summary>
+    /// Clears the custom render order, reverting to default layer order.
+    /// </summary>
+    public void ClearRenderOrder()
+    {
+        Properties.Remove("renderOrder");
+    }
+
 }
