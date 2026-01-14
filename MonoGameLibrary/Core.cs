@@ -38,11 +38,13 @@ public class Core : Game
     /// </summary>
     public static Core Instance => s_instance;
 
-    // The scene that is currently active.
-    private static Scene s_activeScene;
+    // Scene manager for handling scene transitions and caching
+    private static SceneManager s_sceneManager = new SceneManager();
 
-    // The next scene to switch to, if there is one.
-    private static Scene s_nextScene;
+    /// <summary>
+    /// Gets the scene manager for advanced scene operations
+    /// </summary>
+    public static SceneManager SceneManager => s_sceneManager;
 
     /// <summary>
     /// Gets the graphics device manager to control the presentation of graphics.
@@ -58,6 +60,11 @@ public class Core : Game
     /// Gets the sprite batch used for all 2D rendering.
     /// </summary>
     public static SpriteBatch SpriteBatch { get; private set; }
+
+    /// <summary>
+    /// Gets the currently active scene.
+    /// </summary>
+    public static Scene Scene => s_sceneManager.CurrentScene;
 
     /// <summary>
     /// Gets or sets the virtual resolution used for content scaling (design resolution)
@@ -637,6 +644,9 @@ public class Core : Game
 
     protected override void UnloadContent()
     {
+        // Clear scene cache
+        s_sceneManager.ClearCache();
+        
         // Dispose of the audio controller.
         Audio.Dispose();
 
@@ -671,29 +681,16 @@ public class Core : Game
             Exit();
         }
 
-        // if there is a next scene waiting to be switch to, then transition
-        // to that scene.
-        if (s_nextScene != null)
-        {
-            TransitionScene();
-        }
-
-        // If there is an active scene, update it.
-        if (s_activeScene != null)
-        {
-            s_activeScene.Update(gameTime);
-        }
+        // Update scene through SceneManager
+        s_sceneManager.Update(gameTime);
 
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
-        // If there is an active scene, draw it.
-        if (s_activeScene != null)
-        {
-            s_activeScene.Draw(gameTime);
-        }
+        // Draw scene through SceneManager
+        s_sceneManager.Draw(gameTime);
 
         base.Draw(gameTime);
     }
@@ -735,39 +732,35 @@ public class Core : Game
         }
     }
 
+    /// <summary>
+    /// Ensures the SceneManager is ready for scene transitions
+    /// </summary>
+    public static void EnableSceneManager()
+    {
+        // SceneManager is now the only scene management system
+        // This method is kept for API compatibility but no longer needs to do anything
+    }
+
+    /// <summary>
+    /// Transitions to a scene of type T using the cached SceneManager system
+    /// </summary>
+    /// <typeparam name="T">The type of scene to transition to</typeparam>
+    public static void TransitionTo<T>() where T : Scene, new()
+    {
+        s_sceneManager.TransitionTo<T>();
+    }
+
+    /// <summary>
+    /// Changes to a specific scene instance
+    /// </summary>
+    /// <param name="next">The scene instance to transition to</param>
     public static void ChangeScene(Scene next)
     {
-        // Only set the next scene value if it is not the same
-        // instance as the currently active scene.
-        if (s_activeScene != next)
-        {
-            s_nextScene = next;
-        }
+        if (next == null) return;
+        
+        // Cache GameScene instances for resume functionality
+        bool shouldCache = next.GetType().Name == "GameScene";
+        s_sceneManager.TransitionTo(next, shouldCache);
     }
 
-    private static void TransitionScene()
-    {
-        // If there is an active scene, dispose of it.
-        if (s_activeScene != null)
-        {
-            s_activeScene.Dispose();
-        }
-
-        // Force the garbage collector to collect to ensure memory is cleared.
-        GC.Collect();
-
-        // Change the currently active scene to the new scene.
-        s_activeScene = s_nextScene;
-
-        // Null out the next scene value so it does not trigger a change over and over.
-        s_nextScene = null;
-
-        // If the active scene now is not null, initialize it.
-        // Remember, just like with Game, the Initialize call also calls the
-        // Scene.LoadContent
-        if (s_activeScene != null)
-        {
-            s_activeScene.Initialize();
-        }
-    }
 }

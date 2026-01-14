@@ -68,6 +68,16 @@ public abstract class Scene : IDisposable
     }
 
     /// <summary>
+    /// Called when scene becomes inactive (transitioning away)
+    /// </summary>
+    public virtual void OnPause() { }
+
+    /// <summary>
+    /// Called when scene becomes active (transitioning back)
+    /// </summary>
+    public virtual void OnResume() { }
+
+    /// <summary>
     /// Updates this scene.
     /// </summary>
     /// <param name="gameTime">A snapshot of the timing values for the current frame.</param>
